@@ -22,7 +22,7 @@ The MQTT bridge SHALL start when the widget loads, be restarted if it exits, and
 - **THEN** the bridge process exits
 
 ### Requirement: Calendar polling
-The bridge SHALL request today's calendar when Teams subscribes and every poll interval thereafter, and SHALL expose the parsed events (id, subject, start, end, join URL) to the widget.
+The bridge SHALL request today's calendar when Teams subscribes and every poll interval thereafter, and SHALL expose the parsed events (id, subject, start, end, join URL, location) to the widget. The join URL SHALL be set only for online meetings (Teams join link); an Outlook web link is not a join URL.
 
 #### Scenario: Teams connects
 - **WHEN** Teams subscribes to the command topic
@@ -31,6 +31,10 @@ The bridge SHALL request today's calendar when Teams subscribes and every poll i
 #### Scenario: Periodic refresh
 - **WHEN** the poll interval elapses
 - **THEN** a new get-calendar command is sent
+
+#### Scenario: Physical meeting
+- **WHEN** an event has a room in its location and no Teams join link
+- **THEN** it is exposed with an empty join URL and the room name as location
 
 #### Scenario: Cancelled and all-day events
 - **WHEN** the calendar contains cancelled or all-day events

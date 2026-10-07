@@ -8,13 +8,15 @@ const ev = (id, startMin, lenMin = 30) => ({ id, subject: id, start: new Date(no
 const S = (events, o = {}) => M.labelState(events, now, o.inCall || false, o.started || false, o.pulseAt || 0, o.horizon || 15, o.dismissed || {})
 
 assert.equal(S([ev("Standup", 12)]).text, "Standup in 12m")
+assert.deepEqual([S([ev("Standup", 12)]).title, S([ev("Standup", 12)]).suffix], ["Standup", "in 12m"])
 assert.equal(S([ev("Later", 40)]).kind, "none")                        // outside horizon
 assert.equal(S([ev("Later", 40)], { horizon: 60 }).text, "Later in 40m")
 assert.equal(S([ev("B", 10), ev("A", 5)]).event.id, "A")               // earliest wins
 assert.equal(S([ev("Standup", -1)]).text, "Standup · now")        // started, sticky
 assert.equal(S([ev("Standup", -1)], { inCall: true }).kind, "none")    // joined
 assert.equal(S([ev("Old", -60)]).kind, "none")                         // ended
-assert.equal(S([ev("Early", 3)], { started: true }).kind, "now")       // pulse adopts near event
+assert.equal(S([ev("Early", 3)], { started: true }).kind, "now")
+assert.equal(S([ev("Early", 3)], { started: true }).suffix, "now")       // pulse adopts near event
 assert.equal(S([ev("Far", 12)], { started: true, pulseAt: now }).text, "Meeting started")
 assert.equal(S([ev("Far", 12)], { started: true, pulseAt: now - 11 * 60000 }).text, "Far in 12m") // pulse expired
 assert.equal(S([ev("Standup", -1)], { dismissed: { Standup: true } }).kind, "none")

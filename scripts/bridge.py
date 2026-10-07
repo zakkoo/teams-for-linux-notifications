@@ -2,7 +2,7 @@
 """Stdlib-only MQTT broker (3.1.1 + 5, QoS 0/1) that only serves Teams for Linux.
 Mirrors Teams' topics into one JSON state line on stdout per change:
   {"connected": bool, "inCall": bool, "meetingStarted": bool, "error": str,
-   "events": [{"id","subject","start","end","joinUrl"}]}   # start/end ISO-8601 UTC
+   "events": [{"id","subject","start","end","joinUrl","location"}]}   # start/end ISO-8601 UTC
 usage: bridge.py [--port 1883] [--prefix teams] [--poll-minutes 5]"""
 import argparse, json, re, socket, sys, threading, time
 from datetime import datetime, timedelta, timezone
@@ -154,9 +154,10 @@ def parse_graph_events(data):
             continue
         end = end or start + timedelta(hours=1)
         m = re.search(r"https://teams\.microsoft\.com/\S+", e.get("bodyPreview") or "")
-        url = (e.get("onlineMeeting") or {}).get("joinUrl") or (m and m.group(0)) or e.get("webLink") or ""
+        url = (e.get("onlineMeeting") or {}).get("joinUrl") or (m and m.group(0)) or ""  # no webLink: that is Outlook, not a call
+        location = ((e.get("location") or {}).get("displayName") or "").strip()
         out.append({"id": e.get("id") or start.isoformat(), "subject": e.get("subject") or "(no subject)",
-                    "start": start.isoformat(), "end": end.isoformat(), "joinUrl": url})
+                    "start": start.isoformat(), "end": end.isoformat(), "joinUrl": url, "location": location})
     return sorted(out, key=lambda x: x["start"])
 
 

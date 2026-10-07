@@ -68,8 +68,15 @@ Item {
     var t = toasted; t[meetingState.event.id] = true; toasted = t
     var args = ["omarchy-notification-send", "-u", "critical", "--app-name", "Teams Meetings",
                 meetingState.kind === "now" ? "Meeting now" : "Meeting in " + meetingState.minutes + " min", meetingState.event.subject]
-    if (meetingState.event.joinUrl) args.push("--exec", "xdg-open", meetingState.event.joinUrl)
+    if (meetingState.event.joinUrl) args.push("--exec", "teams-for-linux", meetingState.event.joinUrl)
     Quickshell.execDetached(args)
+  }
+
+  // Teams for Linux forwards argv to its running instance and opens meetup-join
+  // links in the app (urlHandling.openMeetupJoinInApp defaults to true).
+  function join(url) {
+    if (!url) return
+    Quickshell.execDetached(["sh", "-c", 'command -v teams-for-linux >/dev/null 2>&1 && exec teams-for-linux "$1" || exec xdg-open "$1"', "_", url])
   }
 
   function dismiss() {

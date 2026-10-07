@@ -38,6 +38,10 @@ Panel {
     }
   }
 
+  function save(key, value) {
+    if (hostWidget && typeof hostWidget.saveSetting === "function") hostWidget.saveSetting(key, value)
+  }
+
   function runAction(a) { if (actionProc.running) return; actionProc.action = a; actionProc.running = true }
 
   PopupCard {
@@ -83,8 +87,8 @@ Panel {
           Text {
             anchors.left: timeText.right
             anchors.leftMargin: Style.space(10)
-            anchors.right: joinBtn.visible ? joinBtn.left : parent.right
-            anchors.rightMargin: joinBtn.visible ? Style.space(10) : 0
+            anchors.right: joinBtn.visible ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
+            anchors.rightMargin: joinBtn.visible || locationText.visible ? Style.space(10) : 0
             anchors.verticalCenter: parent.verticalCenter
             text: rowItem.modelData.subject
             elide: Text.ElideRight
@@ -92,17 +96,92 @@ Panel {
             font.family: root.fontFamily; font.pixelSize: Style.font.body
             font.bold: rowItem.isCurrent
           }
+          Text {
+            id: locationText
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !joinBtn.visible && (rowItem.modelData.location || "") !== ""
+            text: rowItem.modelData.location || ""
+            elide: Text.ElideRight
+            width: Math.min(implicitWidth, Style.space(140))
+            color: root.muted
+            font.family: root.fontFamily; font.pixelSize: Style.font.caption
+          }
           Button {
             id: joinBtn
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: "Join"
-            visible: rowItem.modelData.joinUrl !== ""
+            visible: (rowItem.modelData.joinUrl || "") !== ""
             fontFamily: root.fontFamily
             foreground: root.fg
             bordered: true
-            onClicked: { Quickshell.execDetached(["xdg-open", rowItem.modelData.joinUrl]); root.close() }
+            onClicked: { if (w) w.join(rowItem.modelData.joinUrl); root.close() }
           }
+        }
+      }
+
+
+      PanelSeparator {}
+
+      PanelSectionHeader { text: "Settings"; foreground: root.muted; fontFamily: root.fontFamily }
+
+      NumberField {
+        width: column.width
+        label: "Show upcoming meetings within (min)"
+        from: 1; to: 240
+        value: root.setting("horizonMinutes", 15)
+        foreground: root.fg; fontFamily: root.fontFamily
+        onModified: function(v) { root.save("horizonMinutes", v) }
+      }
+      NumberField {
+        width: column.width
+        label: "Refresh calendar every (min)"
+        from: 1; to: 60
+        value: root.setting("pollMinutes", 5)
+        foreground: root.fg; fontFamily: root.fontFamily
+        onModified: function(v) { root.save("pollMinutes", v) }
+      }
+      Toggle {
+        width: column.width
+        label: "Desktop notification"
+        description: "One toast per meeting, in addition to the bar."
+        checked: root.setting("toast", false) === true
+        foreground: root.fg; fontFamily: root.fontFamily
+        titleSize: Style.font.body
+        onClicked: root.save("toast", !checked)
+      }
+      NumberField {
+        width: column.width
+        visible: root.setting("toast", false) === true
+        label: "Notify minutes before start"
+        from: 0; to: 60
+        value: root.setting("leadMinutes", 2)
+        foreground: root.fg; fontFamily: root.fontFamily
+        onModified: function(v) { root.save("leadMinutes", v) }
+      }
+      NumberField {
+        width: column.width
+        label: "MQTT port (then Connect again)"
+        from: 1024; to: 65535
+        value: root.setting("mqttPort", 1883)
+        foreground: root.fg; fontFamily: root.fontFamily
+        onModified: function(v) { root.save("mqttPort", v) }
+      }
+      Row {
+        width: column.width
+        spacing: Style.space(8)
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: "MQTT topic prefix"
+          color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.body
+        }
+        TextField {
+          id: prefixField
+          width: Style.space(120)
+          text: String(root.setting("mqttPrefix", "teams"))
+          foreground: root.fg
+          onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", "teams"))) root.save("mqttPrefix", text.trim())
         }
       }
 

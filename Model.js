@@ -16,12 +16,12 @@ function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin
   var i
   for (i = 0; i < list.length; i++) {
     if (list[i].start <= nowMs && nowMs < list[i].end)
-      return { kind: "now", event: list[i].e, text: list[i].e.subject + " · now", minutes: 0 }
+      return { kind: "now", event: list[i].e, title: list[i].e.subject, suffix: "now", text: list[i].e.subject + " · now", minutes: 0 }
   }
   if (meetingStarted) {
     for (i = 0; i < list.length; i++) {
       if (Math.abs(list[i].start - nowMs) <= NOW_MATCH_MS && nowMs < list[i].end)
-        return { kind: "now", event: list[i].e, text: list[i].e.subject + " · now", minutes: 0 }
+        return { kind: "now", event: list[i].e, title: list[i].e.subject, suffix: "now", text: list[i].e.subject + " · now", minutes: 0 }
     }
     if (pulseAtMs && nowMs - pulseAtMs <= PULSE_TTL_MS)
       return { kind: "started", event: null, title: "Meeting started", suffix: "", text: "Meeting started", minutes: 0 }

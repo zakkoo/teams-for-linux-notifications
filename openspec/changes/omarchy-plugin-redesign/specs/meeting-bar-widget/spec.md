@@ -40,16 +40,24 @@ The widget SHALL switch to an urgent "now" style for an event that has started a
 - **WHEN** a meeting-started pulse arrives and no event starts within 5 minutes
 - **THEN** the bar shows "Meeting started" without a join action until an active call is reported or 10 minutes pass
 
-### Requirement: Click opens the meeting
-Left-clicking the widget SHALL open the shown event's join URL with the system URL handler, or the popup when no URL is known.
+### Requirement: Clicks
+Left-clicking the widget SHALL open the popup. Right-clicking SHALL open the shown event's join link in Teams for Linux (falling back to the system URL handler when Teams for Linux is not installed). Middle-clicking SHALL dismiss the shown meeting.
 
-#### Scenario: Event has a join URL
-- **WHEN** the shown event has a Teams join link and the user left-clicks
-- **THEN** the link is opened with xdg-open
+#### Scenario: Left-click
+- **WHEN** the user left-clicks the widget
+- **THEN** the popup with today's events, settings and the connection controls opens
 
-#### Scenario: Right-click
-- **WHEN** the user right-clicks the widget
-- **THEN** the popup with today's events and the connection controls opens
+#### Scenario: Right-click with a join URL
+- **WHEN** the shown event has a Teams join link and the user right-clicks
+- **THEN** the link is handed to Teams for Linux, not the browser
+
+#### Scenario: Physical meeting in the popup
+- **WHEN** a meeting has no join link
+- **THEN** the popup shows its location instead of a Join button
+
+#### Scenario: Join button in the popup
+- **WHEN** the user presses Join on a meeting in the popup
+- **THEN** the link is handed to Teams for Linux, not the browser
 
 ### Requirement: Hidden without Teams
 The widget SHALL occupy no space while Teams for Linux is not connected to the bridge, except while Teams has not yet been configured to connect, when it SHALL show only a dimmed icon so the Connect action stays reachable.

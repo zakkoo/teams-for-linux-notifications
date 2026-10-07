@@ -38,8 +38,18 @@ BarWidget {
   implicitHeight: barSize
 
   function openJoin() {
-    if (meetingState.event && meetingState.event.joinUrl) Quickshell.execDetached(["xdg-open", meetingState.event.joinUrl])
+    if (svc && meetingState.event && meetingState.event.joinUrl) svc.join(meetingState.event.joinUrl)
     else togglePanel()
+  }
+
+  // Persist one setting into this widget's shell.json entry. The shell replaces
+  // the whole entry, so merge the current values first.
+  function saveSetting(key, value) {
+    if (!bar || !bar.shell || typeof bar.shell.updateEntryInline !== "function") return false
+    var next = {}
+    for (var k in settings) if (k !== "id") next[k] = settings[k]
+    next[key] = value
+    return bar.shell.updateEntryInline(moduleName, next)
   }
 
   // --- popup
@@ -129,13 +139,13 @@ BarWidget {
     anchors.fill: parent
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
     hoverEnabled: true
-    onEntered: if (root.bar) root.bar.showTooltip(root, root.setupMode ? "Right-click to connect Teams for Linux"
+    onEntered: if (root.bar) root.bar.showTooltip(root, root.setupMode ? "Click to connect Teams for Linux"
                                                         : (root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + " " + root.meetingState.event.subject : root.meetingState.text))
     onExited: if (root.bar) root.bar.hideTooltip(root)
     onClicked: function(mouse) {
-      if (mouse.button === Qt.RightButton || root.setupMode) root.togglePanel()
-      else if (mouse.button === Qt.MiddleButton) { if (root.svc) root.svc.dismiss() }
-      else root.openJoin()
+      if (mouse.button === Qt.MiddleButton) { if (root.svc) root.svc.dismiss() }
+      else if (mouse.button === Qt.RightButton && !root.setupMode) root.openJoin()
+      else root.togglePanel()
     }
   }
 }

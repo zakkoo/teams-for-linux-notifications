@@ -17,6 +17,13 @@ The plugin manifest SHALL declare these settings with defaults and bounds: leadM
 - **WHEN** `omarchy plugin validate` runs on the repository
 - **THEN** it reports the manifest as valid
 
+### Requirement: Settings editable in the popup
+The popup SHALL offer controls for every setting (horizon, poll interval, toast on/off, toast lead time, MQTT port, MQTT prefix) and persist changes to the widget's shell.json entry, so the shell's settings form is never required.
+
+#### Scenario: Change horizon in the popup
+- **WHEN** the user sets the horizon control to 60 in the popup
+- **THEN** shell.json holds horizonMinutes 60 for the widget and the bar reflects it
+
 ### Requirement: Settings apply live
 Changing leadMinutes, horizonMinutes or toast SHALL take effect without restarting the shell or Teams; changing pollMinutes, mqttPort or mqttPrefix SHALL restart the bridge automatically.
 

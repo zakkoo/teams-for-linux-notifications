@@ -17,9 +17,12 @@ now = datetime.now(timezone.utc).replace(microsecond=0)
 g = bridge.parse_graph_events({"value": [
     {"id": "1", "subject": "G", "start": {"dateTime": "2026-10-07T09:00:00.0000000", "timeZone": "UTC"},
      "end": {"dateTime": "2026-10-07T09:30:00.0000000", "timeZone": "UTC"}, "onlineMeeting": {"joinUrl": "https://j"}},
+    {"id": "room", "subject": "Onsite", "start": {"dateTime": "2026-10-07T13:00:00", "timeZone": "UTC"}, "end": {"dateTime": "2026-10-07T14:00:00", "timeZone": "UTC"},
+     "webLink": "https://outlook.office365.com/calendar/item/x", "location": {"displayName": "Room 4.12"}},
     {"id": "2", "isAllDay": True, "start": {}},
     {"id": "3", "isCancelled": True, "start": {"dateTime": "2026-10-07T10:00:00", "timeZone": "UTC"}}]})
-assert g == [{"id": "1", "subject": "G", "start": "2026-10-07T09:00:00+00:00", "end": "2026-10-07T09:30:00+00:00", "joinUrl": "https://j"}], g
+assert g == [{"id": "1", "subject": "G", "start": "2026-10-07T09:00:00+00:00", "end": "2026-10-07T09:30:00+00:00", "joinUrl": "https://j", "location": ""},
+             {"id": "room", "subject": "Onsite", "start": "2026-10-07T13:00:00+00:00", "end": "2026-10-07T14:00:00+00:00", "joinUrl": "", "location": "Room 4.12"}], g
 
 # --- bridge: protocol, both MQTT levels, state lines on stdout
 lines = []
