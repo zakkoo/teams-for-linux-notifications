@@ -24,16 +24,18 @@ sources/01-dbus-sniff/start             # Ctrl-C to stop; read sources/01-dbus-s
 ```
 
 ## The options
-| # | Source | Signal | Needs | Fires |
-|---|--------|--------|-------|-------|
-| 01 | dbus-sniff | Teams/Firefox desktop notifications | Teams + Outlook notification settings on | when they'd have shown a toast |
-| 02 | teams-mqtt | Teams for Linux `meeting-started` + calendar over MQTT | config.json change; Teams running | banner + N min before |
-| 03 | teams-cdp | Teams' own Graph token via DevTools port | `--remote-debugging-port`; Teams running | N min before |
-| 04 | hypr-events | Teams window titles | nothing | title regex match (experimental) |
-| 05 | az-graph | Azure CLI → Graph | tenant must allow Calendars.Read for Azure CLI | N min before |
-| 06 | power-automate | Flow trigger "upcoming event starting soon" → ntfy | build the flow once | server-side, N min before |
-| 07 | ics-feed | Published Outlook ICS link | tenant must allow publishing | N min before (feed lags hours) |
-| 08 | email-rule | Outlook rule forwards invites → IMAP mailbox | an IMAP mailbox you can read | N min before |
+| # | Source | Signal | Needs | Tenant OK? | Fires |
+|---|--------|--------|-------|------------|-------|
+| 01 | dbus-sniff | Teams/Firefox desktop notifications | Teams + Outlook notification settings on | no | when they'd have shown a toast |
+| 02 | teams-mqtt | Teams for Linux `meeting-started` + calendar over MQTT | config.json change; Teams running | no (reuses Teams' own token) | banner + N min before |
+| 03 | teams-cdp | Teams' own Graph token via DevTools port | `--remote-debugging-port`; Teams running | no (reuses Teams' own token) | N min before |
+| 04 | hypr-events | Teams window titles | nothing | no | title regex match (experimental) |
+| 05 | az-graph | Azure CLI → Graph | tenant must allow Calendars.Read for Azure CLI | **yes** — Azure CLI needs Calendars.Read consent (already got Unauthorized here) | N min before |
+| 06 | power-automate | Flow trigger "upcoming event starting soon" → ntfy | build the flow once | partly — Power Automate enabled (usual); HTTP action is premium, email variant needs external forwarding allowed | server-side, N min before |
+| 07 | ics-feed | Published Outlook ICS link | tenant must allow publishing | **yes** — calendar publishing must be enabled | N min before (feed lags hours) |
+| 08 | email-rule | Outlook rule forwards invites → IMAP mailbox | an IMAP mailbox you can read | partly — rule forwarding to an external mailbox is often blocked | N min before |
+
+Start with 01–04 (nothing to ask for). Then 06. Treat 05/07/08 as "check if the setting exists, else delete".
 
 Dead ends not included: anything EWS-based (davmail, evolution-ews, exchangelib) — Microsoft began
 disabling EWS in Exchange Online on 2026-10-01.
