@@ -35,7 +35,7 @@
 
 ## 6. Tests in CI
 
-- [x] 6.0 `tests/manifest-check.py` mirroring the shell's validation plus schema/defaults consistency, and a GitHub Actions workflow running all three checks; verify the scripts pass locally
+- [x] 6.0 Test suites: `tests/test_bridge.py` (framing, both MQTT levels, topics, dedupe, real sockets, process startup), `tests/test_calendar.py`, `tests/test_teams_config.py` (incl. Flatpak/Snap detection), `tests/test_plugin_structure.py` (shell validation rules + manifest/QML/script contracts), `tests/model.test.js` (label state machine); GitHub Actions runs them plus qmllint; verify `python3 -m unittest discover -s tests` and `node --test tests/model.test.js` pass
 
 ## 7. Integration
 

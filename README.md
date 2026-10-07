@@ -78,17 +78,18 @@ on the old checkout before installing the plugin.
 
 Semantic versions, starting at 0.1.0, kept in `manifest.json` and listed in
 [CHANGELOG.md](CHANGELOG.md). The running version is printed in the bottom
-right corner of the popup. `preview.png` is the static image the marketplace
-card uses; `preview.gif` is the animated preview in this README.
+right corner of the popup.
 
 ## Development
 
 ```bash
-python3 tests/manifest-check.py     # manifest rules, schema/defaults consistency, no symlinks
-python3 tests/selfcheck.py          # MQTT bridge, calendar parsing, Teams config helper
-node tests/model-check.js           # bar label state machine against the spec scenarios
-omarchy plugin validate .           # the shell's own manifest check (needs Omarchy)
+python3 -m unittest discover -s tests -v   # bridge protocol, calendar parsing, Teams config helper, plugin structure
+node --test tests/model.test.js            # bar label state machine against the spec scenarios
+omarchy plugin validate .                  # the shell's own manifest check (needs Omarchy)
 ```
 
-The same three scripts run in GitHub Actions on every push. The QML itself is
-exercised by installing the plugin; the shell has no headless test runner.
+No test dependencies: Python's `unittest` and Node's built-in test runner.
+GitHub Actions runs both on every push, plus `qmllint` for QML syntax. The
+QML behaviour itself has no headless runner in the shell, so the structure
+tests pin the contracts between manifest, widget, service and scripts, and the
+rest is covered by installing the plugin.
