@@ -23,6 +23,13 @@ Panel {
   property bool settingsOpen: false   // daily use is the meeting list; settings fold away
   property bool advancedOpen: false
   property string version: ""
+  // Languages whose "meeting started" toast the Connect button teaches Teams for Linux to recognise.
+  readonly property var supportedLanguages: ["en", "de", "es", "fr", "pt"]
+  readonly property var languageNames: ({ en: "English", de: "German", es: "Spanish", fr: "French", pt: "Portuguese" })
+  readonly property string systemLanguage: String(Qt.locale().name || "").split("_")[0].toLowerCase()
+  readonly property bool languageUnsupported: systemLanguage !== "" && supportedLanguages.indexOf(systemLanguage) < 0
+  readonly property string issueUrl: "https://github.com/zakkoo/teams-for-linux-notifications/issues/new?title=" + encodeURIComponent("Support Teams in " + systemLanguage)
+  function supportedList() { return supportedLanguages.map(function (l) { return languageNames[l] }).join(", ") }
   readonly property bool hidePast: setting("hidePast", false) === true
   readonly property real nowMs: w ? w.nowMs : Date.now()
   // Latest first, so the rest of the day reads top-down and finished meetings sink to the bottom.
@@ -351,6 +358,20 @@ Panel {
           wrapMode: Text.Wrap
           color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.caption
         }
+      }
+
+      Text {
+        visible: root.languageUnsupported
+        width: column.width
+        wrapMode: Text.Wrap
+        textFormat: Text.RichText
+        text: "Your system language is <b>" + root.systemLanguage + "</b>. Teams' \"meeting started\" banner is recognised in "
+              + root.supportedList() + ". If Teams runs in another language, switch it to one of those, or "
+              + "<a href=\"" + root.issueUrl + "\">ask the maintainer to add yours</a>."
+        color: root.muted; linkColor: root.fg
+        font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        onLinkActivated: function(link) { Quickshell.execDetached(["xdg-open", link]) }
+        MouseArea { anchors.fill: parent; acceptedButtons: Qt.NoButton; cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor }
       }
 
       // Setup needed: surface the Connect button without opening the fold.

@@ -11,12 +11,25 @@ CANDIDATES = [  # vanilla, Flatpak, Snap — first existing wins, vanilla when n
 ]
 DEFAULT = next((p for p in map(os.path.expanduser, CANDIDATES) if os.path.exists(p)), os.path.expanduser(CANDIDATES[0]))
 
+# Fallback patterns for Teams' "meeting started" toast, per UI language. Teams for Linux lowercases the
+# toast text and compiles these as case-insensitive regexes; its primary detection path is locale-independent.
+PATTERNS = {
+    "en": ["meeting started", "started the meeting"],
+    "de": ["besprechung gestartet", "hat die besprechung gestartet"],
+    "es": [r"reuni[óo]n (ha )?(iniciad|comenzad)", r"(ha )?(iniciado|comenzado|inici[óo]|comenz[óo]) la reuni[óo]n"],
+    "fr": [r"r[ée]union a (d[ée]marr[ée]|commenc[ée])", r"a (d[ée]marr[ée]|commenc[ée]) la r[ée]union"],
+    "pt": [r"reuni[ãa]o (foi )?(iniciada|come[çc]ou)", r"(iniciou|come[çc]ou) a reuni[ãa]o"],
+}
+ALL_PATTERNS = [p for lang in PATTERNS.values() for p in lang]
+
 
 def managed(port, prefix):
     return {
-        "mqtt": {"enabled": True, "brokerUrl": f"mqtt://127.0.0.1:{port}", "topicPrefix": prefix, "commandTopic": "command"},
+        "mqtt": {
+            "enabled": True, "brokerUrl": f"mqtt://127.0.0.1:{port}", "topicPrefix": prefix, "commandTopic": "command",
+            "meetingStartDetection": {"enabled": True, "patterns": ALL_PATTERNS},
+        },
         "graphApi": {"enabled": True},
-        "meetingStartDetection": {"enabled": True},
     }
 
 
@@ -35,32 +48,59 @@ def save(path, cfg):
         os.replace(path, backup)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
-        json.dump(cfg, f, indent=2)
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
         f.write("\n")
     return backup
 
 
+def _matches(have, want):
+    if isinstance(want, dict):
+        return isinstance(have, dict) and all(_matches(have.get(k), v) for k, v in want.items())
+    if isinstance(want, list):
+        return isinstance(have, list) and all(p in have for p in want)
+    return have == want
+
+
 def is_connected(cfg, port, prefix):
-    want = managed(port, prefix)
-    return all(isinstance(cfg.get(k), dict) and all(cfg[k].get(kk) == vv for kk, vv in v.items()) for k, v in want.items())
+    return _matches(cfg, managed(port, prefix))
+
+
+def _merge(into, want):
+    for k, v in want.items():
+        if isinstance(v, dict):
+            into[k] = _merge(into[k] if isinstance(into.get(k), dict) else {}, v)
+        elif isinstance(v, list):  # keep the user's own patterns, add ours once
+            into[k] = [p for p in (into.get(k) if isinstance(into.get(k), list) else []) if p not in v] + v
+        else:
+            into[k] = v
+    return into
+
+
+def _strip(from_, want):
+    for k, v in want.items():
+        if k not in from_:
+            continue
+        if isinstance(v, dict) and isinstance(from_[k], dict):
+            _strip(from_[k], v)
+            if not from_[k]:
+                del from_[k]
+        elif isinstance(v, list) and isinstance(from_[k], list):
+            from_[k] = [p for p in from_[k] if p not in v]
+            if not from_[k]:
+                del from_[k]
+        else:
+            del from_[k]
+    return from_
 
 
 def connect(cfg, port, prefix):
-    for k, v in managed(port, prefix).items():
-        cfg[k] = {**(cfg.get(k) if isinstance(cfg.get(k), dict) else {}), **v}
-    return cfg
+    if cfg.get("meetingStartDetection") == {"enabled": True}:  # the proof of concept wrote it at the wrong level
+        del cfg["meetingStartDetection"]
+    return _merge(cfg, managed(port, prefix))
 
 
 def disconnect(cfg, port, prefix):
-    for k, v in managed(port, prefix).items():
-        section = cfg.get(k)
-        if not isinstance(section, dict):
-            continue
-        for kk in v:
-            section.pop(kk, None)
-        if not section:
-            cfg.pop(k)
-    return cfg
+    return _strip(cfg, managed(port, prefix))
 
 
 def main():

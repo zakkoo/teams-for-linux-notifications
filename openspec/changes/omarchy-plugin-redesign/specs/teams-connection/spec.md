@@ -48,7 +48,7 @@ The bridge SHALL expose whether Teams is connected and whether the user is in a 
 - **THEN** connected becomes false within 10 seconds
 
 ### Requirement: Connect Teams for Linux
-The popup SHALL offer a "Connect Teams for Linux" action that adds the MQTT, Graph API and meeting-start-detection settings to Teams' user config.json without altering other keys, keeps a backup, and tells the user to restart Teams.
+The popup SHALL offer a "Connect Teams for Linux" action that adds the MQTT and Graph API settings and, nested under `mqtt` where Teams for Linux reads it, meeting-start detection with fallback toast patterns for English, German, Spanish, French and Portuguese, to Teams' user config.json without altering other keys (the user's own patterns are kept), keeps a backup, and tells the user to restart Teams.
 
 #### Scenario: Fresh Teams config
 - **WHEN** config.json does not exist and the user clicks Connect
@@ -61,6 +61,10 @@ The popup SHALL offer a "Connect Teams for Linux" action that adds the MQTT, Gra
 #### Scenario: Already connected
 - **WHEN** the required keys are present
 - **THEN** the popup shows Disconnect instead of Connect
+
+#### Scenario: Unsupported system language
+- **WHEN** the system language is not one of the supported ones
+- **THEN** the popup lists the supported languages, suggests switching Teams to one of them, and links to a request to the maintainer
 
 ### Requirement: Disconnect Teams for Linux
 The popup SHALL offer a "Disconnect" action that removes exactly the keys added by Connect.

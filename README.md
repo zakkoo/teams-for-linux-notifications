@@ -66,8 +66,15 @@ keeps retrying quietly.
 Omarchy 4 shell and Teams for Linux 2.20 or newer, installed as a package,
 Flatpak or Snap (the config file is found automatically). The Connect button
 enables Teams for Linux's MQTT, Graph API and meeting-start detection features.
-Meeting-start detection matches the English Teams UI only; other locales need
-`meetingStartDetection.patterns` in the Teams config.
+## Languages
+
+Teams for Linux detects a starting meeting primarily through Teams' internal
+events, which work in any language. Its text-based fallback reads the
+"meeting started" banner, and Connect teaches it the wording for **English,
+German, Spanish, French and Portuguese**. If your system language is not one
+of these, the popup says so and links to an issue template; switching Teams to
+one of the supported languages also works. Requests for more languages are
+welcome: [open an issue](https://github.com/zakkoo/teams-for-linux-notifications/issues/new).
 
 ## Coming from the proof of concept?
 
