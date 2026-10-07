@@ -1,6 +1,6 @@
 # Teams Meetings for Omarchy
 
-**Never miss a Teams meeting again because Teams was hidden.**
+**Never miss a Teams meeting again.**
 
 Teams for Linux only reminds you inside its own window. This
 widget puts your next meeting straight into the Omarchy bar.
@@ -45,9 +45,11 @@ meeting directly. Middle click dismisses a meeting you are skipping.
 
 Everything is in the popup under **Settings & connection**: how far ahead the
 next meeting appears (15 minutes by default), how often the calendar is
-checked, an optional pop-up reminder, and, under *Advanced*, the local port
-and message prefix used to talk to Teams for Linux. The same values are also
-editable in the shell's widget settings form.
+checked, whether long titles scroll through the bar, an optional pop-up
+reminder and its lead time, and, under *Advanced*, the local port and message
+prefix used to talk to Teams for Linux. The meeting list has its own toggle to
+hide finished meetings. The same values are also editable in the shell's
+widget settings form.
 
 ## Remove
 
