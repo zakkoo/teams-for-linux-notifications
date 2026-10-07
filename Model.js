@@ -7,13 +7,19 @@ var PULSE_TTL_MS = 10 * 60 * 1000     // unmatched pulse shown at most this long
 // events: [{id, subject, start, end, joinUrl}] with ISO strings; returns
 // {kind: "none"|"upcoming"|"now"|"started", event, text, minutes}
 function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin, dismissed) {
-  if (inCall) return { kind: "none", event: null, title: "", suffix: "", text: "" }
   var list = (events || []).map(function (e) {
     return { e: e, start: Date.parse(e.start), end: Date.parse(e.end) }
   }).filter(function (x) { return !isNaN(x.start) && !(dismissed && dismissed[x.e.id]) })
   list.sort(function (a, b) { return a.start - b.start })
 
   var i
+  if (inCall) {  // stay visible, just not urgent: the meeting you are in, or a plain "in a call"
+    for (i = 0; i < list.length; i++) {
+      if (list[i].start - NOW_MATCH_MS <= nowMs && nowMs < list[i].end)
+        return { kind: "incall", event: list[i].e, title: list[i].e.subject, suffix: "in call", text: list[i].e.subject + " \u00b7 in call", minutes: 0 }
+    }
+    return { kind: "incall", event: null, title: "In a call", suffix: "", text: "In a call", minutes: 0 }
+  }
   for (i = 0; i < list.length; i++) {
     if (list[i].start <= nowMs && nowMs < list[i].end)
       return { kind: "now", event: list[i].e, title: list[i].e.subject, suffix: "now", text: list[i].e.subject + " · now", minutes: 0 }

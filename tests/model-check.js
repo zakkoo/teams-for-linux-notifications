@@ -13,7 +13,8 @@ assert.equal(S([ev("Later", 40)]).kind, "none")                        // outsid
 assert.equal(S([ev("Later", 40)], { horizon: 60 }).text, "Later in 40m")
 assert.equal(S([ev("B", 10), ev("A", 5)]).event.id, "A")               // earliest wins
 assert.equal(S([ev("Standup", -1)]).text, "Standup · now")        // started, sticky
-assert.equal(S([ev("Standup", -1)], { inCall: true }).kind, "none")    // joined
+assert.deepEqual([S([ev("Standup", -1)], { inCall: true }).kind, S([ev("Standup", -1)], { inCall: true }).suffix], ["incall", "in call"])  // joined: stays, not urgent
+assert.equal(S([], { inCall: true }).text, "In a call")
 assert.equal(S([ev("Old", -60)]).kind, "none")                         // ended
 assert.equal(S([ev("Early", 3)], { started: true }).kind, "now")
 assert.equal(S([ev("Early", 3)], { started: true }).suffix, "now")       // pulse adopts near event

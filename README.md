@@ -12,7 +12,7 @@ widget puts your next meeting straight into the Omarchy bar.
 - **Click to join.** Meetings open in Teams for Linux, not in a browser tab.
   Meetings in a physical room show the room instead.
 
-![Preview](preview.png)
+![Preview](preview.gif)
 
 ## Install
 
@@ -73,6 +73,13 @@ Meeting-start detection matches the English Teams UI only; other locales need
 
 If you ran the old systemd version from this repo: `./install.sh --remove`
 on the old checkout before installing the plugin.
+
+## Versioning
+
+Semantic versions, starting at 0.1.0, kept in `manifest.json` and listed in
+[CHANGELOG.md](CHANGELOG.md). The running version is printed in the bottom
+right corner of the popup. `preview.png` is the static image the marketplace
+card uses; `preview.gif` is the animated preview in this README.
 
 ## Development
 

@@ -22,6 +22,24 @@ Panel {
   property string actionHint: ""
   property bool settingsOpen: false   // daily use is the meeting list; settings fold away
   property bool advancedOpen: false
+  property string version: ""
+  readonly property bool hidePast: setting("hidePast", false) === true
+  readonly property real nowMs: w ? w.nowMs : Date.now()
+  // Latest first, so the rest of the day reads top-down and finished meetings sink to the bottom.
+  readonly property var rows: {
+    var list = (w ? w.events : []).slice()
+    if (hidePast) list = list.filter(function (e) { return Date.parse(e.end) > nowMs })
+    list.sort(function (a, b) { return Date.parse(b.start) - Date.parse(a.start) })
+    return list
+  }
+  readonly property int pastCount: (w ? w.events : []).filter(function (e) { return Date.parse(e.end) <= nowMs }).length
+  readonly property int rowHeight: Style.space(34)
+  readonly property int maxRows: 5
+
+  FileView {
+    path: (w ? w.scriptDir : "") + "../manifest.json"
+    onLoaded: { try { root.version = JSON.parse(text()).version || "" } catch (e) { root.version = "" } }
+  }
 
   function open() { root.controller.show(); if (w) w.refreshWired(); actionHint = "" }
   function close() { root.controller.hide(); settingsOpen = false; advancedOpen = false }
@@ -105,70 +123,104 @@ Panel {
       PanelSectionHeader { text: "Today"; foreground: root.muted; fontFamily: root.fontFamily }
 
       Text {
-        visible: !w || w.events.length === 0
-        text: w && w.connected ? "No meetings today" : "Waiting for Teams for Linux…"
+        visible: root.rows.length === 0
+        text: !w || !w.connected ? "Waiting for Teams for Linux…" : (root.pastCount > 0 ? "No more meetings today" : "No meetings today")
         color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.body
       }
 
-      Repeater {
-        model: w ? w.events : []
-        delegate: Item {
-          id: rowItem
-          required property var modelData
-          readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
-          readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : root.fg
-          readonly property string location: modelData.location || ""
-          readonly property bool joinable: (modelData.joinUrl || "") !== ""
-          width: column.width
-          height: Math.max(timeText.implicitHeight, joinBtn.implicitHeight)
-          Text {
-            id: timeText
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            text: Model.fmtTime(rowItem.modelData.start)
-            color: rowItem.isCurrent ? rowItem.rowColor : root.muted
-            font.family: root.fontFamily; font.pixelSize: Style.font.body
-          }
-          Text {
-            anchors.left: timeText.right
-            anchors.leftMargin: Style.space(10)
-            anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
-            anchors.rightMargin: rowItem.joinable || locationText.visible ? Style.space(10) : 0
-            anchors.verticalCenter: parent.verticalCenter
-            text: rowItem.modelData.subject
-            elide: Text.ElideRight
-            color: rowItem.rowColor
-            font.family: root.fontFamily; font.pixelSize: Style.font.body
-            font.bold: rowItem.isCurrent
-          }
-          Text {
-            id: locationText
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !rowItem.joinable && rowItem.location !== ""
-            text: rowItem.location
-            elide: Text.ElideRight
-            width: Math.min(implicitWidth, Style.space(150))
-            color: root.muted
-            font.family: root.fontFamily; font.pixelSize: Style.font.caption
-            MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-            PanelToolTip {
-              visible: locationMouse.containsMouse && locationText.truncated
-              text: rowItem.location
-              fontFamily: root.fontFamily
+      Flickable {
+        id: listFlick
+        width: column.width
+        height: Math.min(root.rows.length, root.maxRows) * root.rowHeight
+        contentWidth: width
+        contentHeight: listColumn.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+
+        Column {
+          id: listColumn
+          width: listFlick.width
+
+          Repeater {
+            model: root.rows
+            delegate: Item {
+              id: rowItem
+              required property var modelData
+              readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
+              readonly property bool past: Date.parse(modelData.end) <= root.nowMs
+              readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : (past ? root.muted : root.fg)
+              readonly property string location: modelData.location || ""
+              readonly property bool joinable: (modelData.joinUrl || "") !== ""
+              width: listColumn.width
+              height: root.rowHeight
+              opacity: past ? 0.55 : 1
+              Text {
+                id: timeText
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: Model.fmtTime(rowItem.modelData.start)
+                color: rowItem.isCurrent ? rowItem.rowColor : root.muted
+                font.family: root.fontFamily; font.pixelSize: Style.font.body
+              }
+              Text {
+                anchors.left: timeText.right
+                anchors.leftMargin: Style.space(10)
+                anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
+                anchors.rightMargin: rowItem.joinable || locationText.visible ? Style.space(10) : 0
+                anchors.verticalCenter: parent.verticalCenter
+                text: rowItem.modelData.subject
+                elide: Text.ElideRight
+                color: rowItem.rowColor
+                font.family: root.fontFamily; font.pixelSize: Style.font.body
+                font.bold: rowItem.isCurrent
+                font.strikeout: rowItem.past
+              }
+              Text {
+                id: locationText
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                visible: (rowItem.modelData.joinUrl || "") === "" && rowItem.location !== ""
+                text: rowItem.location
+                elide: Text.ElideRight
+                width: Math.min(implicitWidth, Style.space(150))
+                color: root.muted
+                font.family: root.fontFamily; font.pixelSize: Style.font.caption
+                MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+                PanelToolTip {
+                  visible: locationMouse.containsMouse && locationText.truncated
+                  text: rowItem.location
+                  fontFamily: root.fontFamily
+                }
+              }
+              Button {
+                id: joinBtn
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Join"
+                visible: rowItem.joinable
+                fontFamily: root.fontFamily
+                foreground: root.fg
+                bordered: true
+                onClicked: { if (w) w.join(rowItem.modelData.joinUrl); root.close() }
+              }
             }
           }
-          Button {
-            id: joinBtn
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Join"
-            visible: rowItem.joinable
-            fontFamily: root.fontFamily
-            foreground: root.fg
-            bordered: true
-            onClicked: { if (w) w.join(rowItem.modelData.joinUrl); root.close() }
-          }
+        }
+      }
+
+      // One-click declutter; persisted, so it stays the way you set it.
+      Item {
+        width: column.width
+        height: pastLabel.implicitHeight
+        visible: root.pastCount > 0
+        Text {
+          id: pastLabel
+          anchors.right: parent.right
+          text: root.hidePast ? "Show " + root.pastCount + " finished" : "Hide " + root.pastCount + " finished"
+          color: pastMouse.containsMouse ? root.fg : root.muted
+          font.family: root.fontFamily; font.pixelSize: Style.font.caption
+          MouseArea { id: pastMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.save("hidePast", !root.hidePast) }
         }
       }
 
@@ -194,6 +246,28 @@ Panel {
           value: root.setting("pollMinutes", 5)
           hint: "How often new or moved meetings are picked up from Teams. 5 is plenty; lower only if your calendar changes constantly."
           onModified: function(v) { root.save("pollMinutes", v) }
+        }
+        Dropdown {
+          width: parent.width
+          label: "Long titles in the bar"
+          options: ["Always", "Never", "A few times"]
+          value: String(root.setting("scroll", "Always"))
+          foreground: root.fg; fontFamily: root.fontFamily
+          onChanged: function(v) { root.save("scroll", v) }
+        }
+        Text {
+          width: parent.width
+          text: "Long meeting titles scroll through the bar. Never shows a cut title instead; hover it for the full name. A few times scrolls, then stops."
+          wrapMode: Text.Wrap
+          color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        }
+        SettingNumber {
+          visible: String(root.setting("scroll", "Always")) === "A few times"
+          label: "How many times to scroll"
+          from: 1; to: 20
+          value: root.setting("scrollTimes", 3)
+          hint: "After that the title stays put, cut at the edge."
+          onModified: function(v) { root.save("scrollTimes", v) }
         }
         Toggle {
           width: parent.width
@@ -289,6 +363,15 @@ Panel {
         wrapMode: Text.Wrap
         color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.caption
       }
+    }
+
+    Text {
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      anchors.bottomMargin: -Style.space(6)
+      text: root.version ? "v" + root.version : ""
+      color: Qt.darker(root.fg, 2.4)
+      font.family: root.fontFamily; font.pixelSize: Math.max(8, Style.font.caption - 2)
     }
   }
 }

@@ -30,6 +30,7 @@
 
 - [x] 5.1 `Panel.qml`: today's events with Join buttons, connection status line, last bridge error; verify it opens anchored to the widget
 - [x] 5.3 Settings controls in the popup (horizon, poll, toast, lead, port, prefix) persisting through the shell's inline-settings API; verify the controls render with current values
+- [x] 5.4 Popup list: latest first, finished rows dimmed, hide-finished toggle, five-row scroll cap, location tooltip, collapsible settings with advanced section, version label; verify by screenshot
 - [ ] 5.2 Connect/Disconnect button driven by `teams-config.py status`, with the "restart Teams" hint; verify both actions edit the config and the button flips
 
 ## 6. Integration

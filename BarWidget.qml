@@ -32,6 +32,11 @@ BarWidget {
   readonly property string label: setupMode ? "" : meetingState.title
   readonly property string suffix: setupMode ? "" : (meetingState.suffix || "")
   property real maxLabelWidth: 180
+  readonly property string scrollMode: String(setting("scroll", "Always"))
+  readonly property int scrollTimes: Math.max(1, setting("scrollTimes", 3))
+  property int scrollRuns: 0
+  readonly property bool scrolling: labelText.needsScroll && !opened && (scrollMode === "Always" || (scrollMode === "A few times" && scrollRuns < scrollTimes))
+  onLabelChanged: scrollRuns = 0
 
   visible: svc !== null && (setupMode || (svc.connected && meetingState.kind !== "none"))
   implicitWidth: visible ? row.implicitWidth + Style.space(14) : 0
@@ -112,13 +117,18 @@ BarWidget {
         font.pixelSize: Style.font.body
         anchors.verticalCenter: parent.verticalCenter
         property bool needsScroll: implicitWidth > scrollClip.width
+        // Static: cut at the clip edge, full title in the hover tooltip.
+        width: root.scrolling ? implicitWidth : scrollClip.width
+        elide: root.scrolling ? Text.ElideNone : Text.ElideRight
+        x: root.scrolling ? x : 0
         NumberAnimation on x {
-          running: labelText.needsScroll && !root.opened
-          loops: Animation.Infinite
+          running: root.scrolling
+          loops: 1
           duration: Math.max(6000, labelText.implicitWidth * 25)
           from: scrollClip.width
           to: -labelText.implicitWidth
           easing.type: Easing.Linear
+          onFinished: { root.scrollRuns += 1; if (root.scrolling) restart() }
         }
       }
     }
@@ -135,12 +145,16 @@ BarWidget {
     }
   }
 
+  // The bar shows a tooltip only for targets that report this flag (see Bar.targetTooltipHovered).
+  readonly property bool tooltipHovered: visible && mouse.containsMouse
+
   MouseArea {
+    id: mouse
     anchors.fill: parent
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
     hoverEnabled: true
     onEntered: if (root.bar) root.bar.showTooltip(root, root.setupMode ? "Click to connect Teams for Linux"
-                                                        : (root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + " " + root.meetingState.event.subject : root.meetingState.text))
+                                                        : (root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + "  " + root.meetingState.event.subject + "  ·  " + root.suffix : root.meetingState.text))
     onExited: if (root.bar) root.bar.hideTooltip(root)
     onClicked: function(mouse) {
       if (mouse.button === Qt.MiddleButton) { if (root.svc) root.svc.dismiss() }

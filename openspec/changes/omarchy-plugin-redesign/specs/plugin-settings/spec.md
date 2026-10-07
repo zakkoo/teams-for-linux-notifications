@@ -7,7 +7,7 @@ Every tunable of the plugin is exposed through the Omarchy shell's settings form
 ## ADDED Requirements
 
 ### Requirement: Settings declared in the manifest
-The plugin manifest SHALL declare these settings with defaults and bounds: leadMinutes (2, 0-60), horizonMinutes (15, 1-240), pollMinutes (5, 1-60), toast (false), mqttPort (1883, 1024-65535), mqttPrefix ("teams").
+The plugin manifest SHALL declare these settings with defaults and bounds: leadMinutes (2, 0-60), horizonMinutes (15, 1-240), pollMinutes (5, 1-60), toast (false), hidePast (false), scroll (Always | Never | A few times, default Always), scrollTimes (3, 1-20), mqttPort (1883, 1024-65535), mqttPrefix ("teams").
 
 #### Scenario: Fresh install
 - **WHEN** the plugin is enabled without any configuration

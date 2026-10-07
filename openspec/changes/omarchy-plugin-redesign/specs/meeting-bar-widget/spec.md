@@ -22,7 +22,7 @@ The widget SHALL display the subject and minutes-until-start of the earliest non
 - **THEN** only the one starting in 5 minutes is shown
 
 ### Requirement: Meeting-in-progress label is sticky
-The widget SHALL switch to an urgent "now" style for an event that has started and the user has not joined, and SHALL keep it until the user is in a call, the event ends, or the user dismisses it.
+The widget SHALL switch to an urgent "now" style for an event that has started and the user has not joined, and SHALL keep it until the user is in a call, the event ends, or the user dismisses it. While the user is in a call the widget SHALL stay visible in its normal colour, showing the meeting title with "in call", or "In a call" when no calendar event matches.
 
 #### Scenario: Start time reached
 - **WHEN** the current time passes an event's start and Teams reports no active call
@@ -34,7 +34,7 @@ The widget SHALL switch to an urgent "now" style for an event that has started a
 
 #### Scenario: User joins
 - **WHEN** Teams reports an active call
-- **THEN** the "now" label disappears
+- **THEN** the urgent "now" label turns into the normal-coloured title with "in call" and stays until the call ends
 
 #### Scenario: Pulse without a matching event
 - **WHEN** a meeting-started pulse arrives and no event starts within 5 minutes
@@ -81,9 +81,32 @@ When the toast setting is enabled, the widget SHALL send one desktop notificatio
 - **WHEN** toast is off and an event enters the "now" state
 - **THEN** no notification is sent
 
-### Requirement: Long titles
-Titles wider than the label area SHALL scroll horizontally rather than widen the bar.
+### Requirement: Popup meeting list
+The popup SHALL list today's meetings latest first, show at most five rows before scrolling, grey out and strike through finished meetings, offer a one-click toggle to hide finished meetings that persists as a setting, and show the plugin version unobtrusively in its bottom-right corner.
 
-#### Scenario: Long subject
-- **WHEN** the subject is longer than the label area
-- **THEN** the label width is capped and the text scrolls
+#### Scenario: Many meetings
+- **WHEN** the day has more than five meetings
+- **THEN** the list is five rows tall and scrolls
+
+#### Scenario: Finished meeting
+- **WHEN** a meeting's end time has passed
+- **THEN** its row is dimmed and struck through, keeping its Join button or location
+
+#### Scenario: Hide finished
+- **WHEN** the user clicks "Hide N finished"
+- **THEN** finished meetings disappear from the list and stay hidden on later opens until "Show N finished" is clicked
+
+### Requirement: Long titles
+Titles wider than the label area SHALL never widen the bar. Depending on the scroll setting they SHALL scroll continuously (Always), scroll a configured number of times and then stop (A few times), or be cut at the edge (Never). Whenever the title is cut, hovering the widget SHALL show the full title in a tooltip.
+
+#### Scenario: Always
+- **WHEN** the subject is longer than the label area and scroll is Always
+- **THEN** the label width is capped and the text scrolls without end
+
+#### Scenario: A few times
+- **WHEN** scroll is "A few times" with 3 and a long title appears
+- **THEN** the text scrolls through three times and then stays cut at the edge
+
+#### Scenario: Never
+- **WHEN** scroll is Never and the title is longer than the label area
+- **THEN** the title is cut with an ellipsis and hovering shows the full title
