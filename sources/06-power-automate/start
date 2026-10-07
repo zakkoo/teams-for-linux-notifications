@@ -1,0 +1,17 @@
+#!/bin/bash
+# Subscribe to an ntfy topic that a Power Automate flow publishes to.
+set -uo pipefail
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+[[ -f $ROOT/config.env ]] && { set -a; . "$ROOT/config.env"; set +a; }
+: "${NTFY_TOPIC:?set NTFY_TOPIC in config.env (long random string)}"
+NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
+
+while true; do
+  curl -sN "$NTFY_SERVER/$NTFY_TOPIC/json" | while read -r line; do
+    ev=$(jq -r 'select(.event=="message") | [(.title // "Meeting"), (.message // ""), (.click // "")] | @tsv' <<<"$line")
+    [[ -z $ev ]] && continue
+    IFS=$'\t' read -r title body url <<<"$ev"
+    "$ROOT/alert/alert.sh" "$title" "$body" "$url"
+  done
+  sleep 5  # reconnect
+done

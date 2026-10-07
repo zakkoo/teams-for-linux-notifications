@@ -1,0 +1,6 @@
+{
+  "mqtt": { "enabled": true, "brokerUrl": "mqtt://127.0.0.1:1883", "commandTopic": "command" },
+  "graphApi": { "enabled": true },
+  "meetingStartDetection": { "enabled": true },
+  "notificationMethod": "electron"
+}

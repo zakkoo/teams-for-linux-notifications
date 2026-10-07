@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Poll a published Outlook ICS feed; alert before each occurrence."""
+import os, sys, time, urllib.request
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "alert"))
+import due, ics
+
+due.load_env()
+URL = os.environ.get("ICS_URL") or sys.exit("set ICS_URL in config.env")
+events, last = [], 0
+while True:
+    if time.time() - last > 300:
+        try:
+            events = ics.parse(urllib.request.urlopen(URL, timeout=20).read().decode("utf-8", "replace"))
+            print(f"{len(events)} occurrences yesterday..tomorrow", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"fetch failed: {e}", file=sys.stderr, flush=True)
+        last = time.time()
+    due.alert_due(events)
+    time.sleep(30)
