@@ -7,7 +7,7 @@ Shows the user's next Teams meeting and an in-progress meeting directly in the O
 ## Requirements
 
 ### Requirement: Upcoming meeting label
-The widget SHALL display the subject and minutes-until-start of the earliest non-cancelled, non-all-day event whose start lies within the configured horizon.
+The widget SHALL display the subject and minutes-until-start of the earliest non-cancelled, non-all-day event whose start lies within the configured horizon. When no event qualifies and no meeting is in progress, the widget SHALL still show the calendar icon with no text.
 
 #### Scenario: One event inside the horizon
 - **WHEN** the horizon is 15 minutes and an event titled "Standup" starts in 12 minutes
@@ -15,7 +15,7 @@ The widget SHALL display the subject and minutes-until-start of the earliest non
 
 #### Scenario: No event inside the horizon
 - **WHEN** the next event starts in 40 minutes and the horizon is 15 minutes
-- **THEN** the widget occupies no space in the bar
+- **THEN** the bar shows only the calendar icon in the normal bar colour, and hovering it shows the connection status ("Connected", or "Connected · no calendar received yet")
 
 #### Scenario: Several events inside the horizon
 - **WHEN** two events start in 5 and 10 minutes
@@ -41,15 +41,27 @@ The widget SHALL switch to an urgent "now" style for an event that has started a
 - **THEN** the bar shows "Meeting started" without a join action until an active call is reported or 10 minutes pass
 
 ### Requirement: Clicks
-Left-clicking the widget SHALL open the popup. Right-clicking SHALL open the shown event's join link in Teams for Linux (falling back to the system URL handler when Teams for Linux is not installed). Middle-clicking SHALL dismiss the shown meeting.
+Left-clicking the widget SHALL open the popup. Right-clicking SHALL open the shown event's join link in Teams for Linux (falling back to the system URL handler when Teams for Linux is not installed), or open the popup when no event with a join link is shown. Middle-clicking SHALL dismiss the shown meeting and SHALL do nothing when no meeting is shown.
 
 #### Scenario: Left-click
 - **WHEN** the user left-clicks the widget
 - **THEN** the popup with today's events, settings and the connection controls opens
 
+#### Scenario: Left-click while idle
+- **WHEN** no meeting is shown, or Teams for Linux is not connected, and the user left-clicks the icon
+- **THEN** the popup opens
+
 #### Scenario: Right-click with a join URL
 - **WHEN** the shown event has a Teams join link and the user right-clicks
 - **THEN** the link is handed to Teams for Linux, not the browser
+
+#### Scenario: Right-click while idle
+- **WHEN** no meeting is shown and the user right-clicks the icon
+- **THEN** the popup opens
+
+#### Scenario: Middle-click while idle
+- **WHEN** no meeting is shown and the user middle-clicks the icon
+- **THEN** nothing changes
 
 #### Scenario: Physical meeting in the popup
 - **WHEN** a meeting has no join link
@@ -59,16 +71,20 @@ Left-clicking the widget SHALL open the popup. Right-clicking SHALL open the sho
 - **WHEN** the user presses Join on a meeting in the popup
 - **THEN** the link is handed to Teams for Linux, not the browser
 
-### Requirement: Hidden without Teams
-The widget SHALL occupy no space while Teams for Linux is not connected to the bridge, except while Teams has not yet been configured to connect, when it SHALL show only a dimmed icon so the Connect action stays reachable.
+### Requirement: Always visible, dimmed without Teams
+The widget SHALL always occupy space in the bar and show the calendar icon. While Teams for Linux is not connected to the bridge, for any reason (bridge starting, Teams not running, Teams not yet configured to connect), the icon SHALL be dimmed and no text SHALL be shown, so the user can tell an idle widget from a broken one and the popup stays reachable. Hovering the dimmed icon SHALL show the reason in a tooltip.
 
 #### Scenario: Setup needed
 - **WHEN** Teams for Linux's config does not contain the plugin's MQTT keys
-- **THEN** the bar shows a dimmed icon with no text, and clicking it opens the popup
+- **THEN** the bar shows a dimmed icon with no text, hovering it says Teams for Linux is not connected yet, and clicking it opens the popup
 
 #### Scenario: Teams quits
 - **WHEN** Teams for Linux disconnects
-- **THEN** the widget disappears within 10 seconds, regardless of pending events
+- **THEN** within 10 seconds any meeting text disappears and the icon turns dimmed, regardless of pending events; hovering it says the widget is waiting for Teams for Linux
+
+#### Scenario: Teams returns
+- **WHEN** Teams for Linux reconnects
+- **THEN** the icon returns to the normal bar colour and the meeting label, if any, reappears
 
 ### Requirement: Optional toast
 When the toast setting is enabled, the widget SHALL send one desktop notification per meeting on the transition into the "now" state, and none otherwise. The notification SHALL NOT contain the meeting subject: every notification transport (omarchy-notification-send, notify-send, busctl) ends in a process whose argv is world-readable via `/proc/*/cmdline`, so a generic headline ("Teams meeting now" / "Teams meeting in N min") is used and the bar/popup remain the place to see which meeting it is.

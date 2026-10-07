@@ -36,7 +36,12 @@ omarchy bar move io.github.zakkoo.teams-for-linux-notifications --section right
 |---|---|
 | Next meeting within the horizon (default 15 min) | `󰃰 Standup in 12m` |
 | Meeting started, you have not joined | `󰃰 Standup · now` in the urgent colour, sticky |
-| You are in the call, or nothing upcoming, or Teams closed | nothing |
+| You are in the call | `󰃰 Standup · in call` |
+| Nothing upcoming | `󰃰` alone; hover says "Connected" |
+| Teams for Linux closed or not yet connected | `󰃰` dimmed; hover says why ("Waiting for Teams for Linux (is it running?)") |
+
+The icon is always in the bar, so a bare icon means the widget is fine and
+simply has nothing to announce. Only the text comes and goes.
 
 Left click opens the popup with today's meetings. Right click joins the shown
 meeting directly. Middle click dismisses a meeting you are skipping.

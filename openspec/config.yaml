@@ -1,5 +1,14 @@
 schema: spec-driven
 
+rules:
+  tasks:
+    - Every change that alters user-visible behaviour MUST end with a release task group that bumps "version" in manifest.json and adds a matching CHANGELOG.md entry (same version heading, one short paragraph in the style of the existing entries)
+
+operations:
+  apply:
+    guidance:
+      - Before reporting all tasks complete, confirm manifest.json version and the top CHANGELOG.md heading match and describe this change
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.

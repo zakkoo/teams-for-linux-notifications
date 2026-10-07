@@ -103,6 +103,12 @@ class QmlContracts(unittest.TestCase):
         self.assertIn("Plugin.ServiceRegistry.instance = null", self.svc)
         self.assertIn("bridge.running = false", self.svc, "the bridge must die with the service")
 
+    def test_widget_never_collapses_when_idle(self):
+        # The icon must stay in the bar with no meeting and without Teams; only the label comes and goes.
+        for prop in ("visible", "implicitWidth"):
+            line = re.search(rf"(?m)^\s+{prop}: (.*)$", self.bw).group(1)
+            self.assertNotRegex(line, r"meetingState|connected|setupMode", f"{prop} must not depend on meeting or connection state: {line}")
+
     def test_widget_exposes_what_the_bar_needs(self):
         for name in ("opened", "popoutSwitchClosing", "tooltipHovered"):
             self.assertRegex(self.bw, rf'property bool {name}\b', name)

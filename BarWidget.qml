@@ -38,8 +38,9 @@ BarWidget {
   readonly property bool scrolling: labelText.needsScroll && !opened && (scrollMode === "Always" || (scrollMode === "A few times" && scrollRuns < scrollTimes))
   onLabelChanged: scrollRuns = 0
 
-  visible: svc !== null && (setupMode || (svc.connected && meetingState.kind !== "none"))
-  implicitWidth: visible ? row.implicitWidth + Style.space(14) : 0
+  // Always in the bar: the icon alone says "alive"; dimmed says "no Teams".
+  visible: svc !== null
+  implicitWidth: row.implicitWidth + Style.space(14)
   implicitHeight: barSize
 
   function openJoin() {
@@ -95,7 +96,7 @@ BarWidget {
       textFormat: Text.PlainText
       anchors.verticalCenter: parent.verticalCenter
       text: root.icon
-      color: root.setupMode ? Qt.darker(root.fg, 1.8) : root.fg
+      color: root.svc && !root.svc.connected ? Qt.darker(root.fg, 1.8) : root.fg
       font.family: root.bar ? root.bar.fontFamily : Style.font.family
       font.pixelSize: Style.font.body
     }
@@ -154,7 +155,8 @@ BarWidget {
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
     hoverEnabled: true
     onEntered: if (root.bar) root.bar.showTooltip(root, root.setupMode ? "Click to connect Teams for Linux"
-                                                        : (root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + "  " + root.meetingState.event.subject + "  ·  " + root.suffix : root.meetingState.text))
+                                                        : root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + "  " + root.meetingState.event.subject + "  ·  " + root.suffix
+                                                        : root.meetingState.text || (root.svc ? root.svc.statusText() : ""))
     onExited: if (root.bar) root.bar.hideTooltip(root)
     onClicked: function(mouse) {
       if (mouse.button === Qt.MiddleButton) { if (root.svc) root.svc.dismiss() }

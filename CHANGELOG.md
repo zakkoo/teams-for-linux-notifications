@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+The calendar icon now stays in the bar at all times. Before, the widget
+collapsed to nothing whenever no meeting fell inside the horizon, so there was
+no way to tell "idle" from "crashed" and no click target for the popup. The
+icon is dimmed while Teams for Linux is not connected, and hovering the idle
+icon shows the connection status.
+
 ## 0.1.2
 
 The reminder toast no longer contains the meeting subject at all. Every
