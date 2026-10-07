@@ -7,7 +7,7 @@ var PULSE_TTL_MS = 10 * 60 * 1000     // unmatched pulse shown at most this long
 // events: [{id, subject, start, end, joinUrl}] with ISO strings; returns
 // {kind: "none"|"upcoming"|"now"|"started", event, text, minutes}
 function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin, dismissed) {
-  if (inCall) return { kind: "none", event: null, text: "" }
+  if (inCall) return { kind: "none", event: null, title: "", suffix: "", text: "" }
   var list = (events || []).map(function (e) {
     return { e: e, start: Date.parse(e.start), end: Date.parse(e.end) }
   }).filter(function (x) { return !isNaN(x.start) && !(dismissed && dismissed[x.e.id]) })
@@ -24,16 +24,16 @@ function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin
         return { kind: "now", event: list[i].e, text: list[i].e.subject + " · now", minutes: 0 }
     }
     if (pulseAtMs && nowMs - pulseAtMs <= PULSE_TTL_MS)
-      return { kind: "started", event: null, text: "Meeting started", minutes: 0 }
+      return { kind: "started", event: null, title: "Meeting started", suffix: "", text: "Meeting started", minutes: 0 }
   }
   for (i = 0; i < list.length; i++) {
     var dt = list[i].start - nowMs
     if (dt > 0 && dt <= horizonMin * 60 * 1000) {
       var m = Math.ceil(dt / 60000)
-      return { kind: "upcoming", event: list[i].e, text: list[i].e.subject + " in " + m + "m", minutes: m }
+      return { kind: "upcoming", event: list[i].e, title: list[i].e.subject, suffix: "in " + m + "m", text: list[i].e.subject + " in " + m + "m", minutes: m }
     }
   }
-  return { kind: "none", event: null, text: "" }
+  return { kind: "none", event: null, title: "", suffix: "", text: "" }
 }
 
 // Toast is due when the state is "now" or the event starts within leadMin.

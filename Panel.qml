@@ -47,12 +47,12 @@ Panel {
     bar: root.bar
     open: root.opened
     centerOnBar: true
-    contentWidth: Style.space(360)
-    contentHeight: column.implicitHeight
+    contentWidth: card.fittedContentWidth(Style.space(400))
+    contentHeight: card.fittedContentHeight(column.implicitHeight)
 
     Column {
       id: column
-      width: card.contentWidth
+      width: parent.width
       spacing: Style.space(10)
 
       PanelSectionHeader { text: "Today"; foreground: root.muted; fontFamily: root.fontFamily }
@@ -65,36 +65,43 @@ Panel {
 
       Repeater {
         model: w ? w.events : []
-        delegate: Row {
+        delegate: Item {
+          id: rowItem
           required property var modelData
           readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
+          readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : root.fg
           width: column.width
-          spacing: Style.space(8)
+          height: Math.max(timeText.implicitHeight, joinBtn.implicitHeight)
           Text {
-            width: Style.space(44)
-            text: Model.fmtTime(modelData.start)
-            color: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : root.muted
-            font.family: root.fontFamily; font.pixelSize: Style.font.body
+            id: timeText
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+            text: Model.fmtTime(rowItem.modelData.start)
+            color: rowItem.isCurrent ? rowItem.rowColor : root.muted
+            font.family: root.fontFamily; font.pixelSize: Style.font.body
           }
           Text {
-            width: parent.width - Style.space(44) - joinBtn.width - Style.space(16)
-            text: modelData.subject
-            elide: Text.ElideRight
-            color: isCurrent ? (w.urgent ? (bar ? bar.urgent : Color.urgent) : root.fg) : root.fg
-            font.family: root.fontFamily; font.pixelSize: Style.font.body
-            font.bold: isCurrent
+            anchors.left: timeText.right
+            anchors.leftMargin: Style.space(10)
+            anchors.right: joinBtn.visible ? joinBtn.left : parent.right
+            anchors.rightMargin: joinBtn.visible ? Style.space(10) : 0
             anchors.verticalCenter: parent.verticalCenter
+            text: rowItem.modelData.subject
+            elide: Text.ElideRight
+            color: rowItem.rowColor
+            font.family: root.fontFamily; font.pixelSize: Style.font.body
+            font.bold: rowItem.isCurrent
           }
           Button {
             id: joinBtn
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
             text: "Join"
-            visible: modelData.joinUrl !== ""
+            visible: rowItem.modelData.joinUrl !== ""
             fontFamily: root.fontFamily
             foreground: root.fg
             bordered: true
-            anchors.verticalCenter: parent.verticalCenter
-            onClicked: { Quickshell.execDetached(["xdg-open", modelData.joinUrl]); root.close() }
+            onClicked: { Quickshell.execDetached(["xdg-open", rowItem.modelData.joinUrl]); root.close() }
           }
         }
       }

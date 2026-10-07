@@ -27,7 +27,8 @@ See proposal.md for motivation. Constraints discovered while exploring:
 
 ## Decisions
 
-1. **Bridge is a child `Process` of the bar widget, always running while the shell runs; the widget hides itself until Teams connects.**
+1. **Bridge is a child `Process` of a shell-owned `service` (Service.qml), always running while the shell runs; the per-monitor bar widgets only render and hide themselves until Teams connects.**
+   The bar instantiates one widget per monitor. A first attempt hosted the bridge in the widget: the second monitor's instance could not bind the port and stayed "disconnected" forever. The manifest therefore declares `kinds: ["service", "bar-widget"]`; the service registers itself in a plugin-local QML singleton (`ServiceRegistry.qml` via `qmldir`), the same pattern the notification-center plugin uses, and widgets read state and push their settings into it.
    Alternatives: (a) systemd user unit, as in the PoC: survives shell restarts but requires an installer step the plugin system forbids. (b) Start/stop the bridge on Teams' Wayland toplevel: breaks when Teams sits in the tray. An idle broker blocked on `accept()` costs nothing measurable, and `{prefix}/connected` with LWT is the authoritative "Teams is here" signal.
 
 2. **Keep the PoC's stdlib MQTT broker and due-logic in Python (`scripts/bridge.py`); it emits one JSON line per state change on stdout.**
@@ -62,6 +63,7 @@ See proposal.md for motivation. Constraints discovered while exploring:
 
 ## Risks / Trade-offs
 
+- [Hot-reload shows stale QML] → Qt caches the plugin directory listing and compiled components: a file added after load reports "File name case mismatch", and edits to `Panel.qml` loaded through a `Loader` are not picked up. Development loop is `omarchy restart shell`; a fresh `omarchy plugin add` is unaffected.
 - [Teams restarted while bridge holds the port] → broker accepts the next connection; Teams' MQTT client auto-reconnects. Bridge must handle sequential clients, which the PoC already does.
 - [Port 1883 in use by a real broker] → `mqttPort` setting; popup shows the bridge's last error line.
 - [Shell restart kills the bridge mid-meeting] → state is recomputed from the next calendar fetch on start; a meeting in progress reappears as "now" because `start <= now < end`.

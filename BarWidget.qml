@@ -25,12 +25,13 @@ BarWidget {
   onSettingsChanged: { pushSettings(); injectPanel() }
   Component.onCompleted: pushSettings()
 
-  readonly property var meetingState: svc ? svc.meetingState : { kind: "none", event: null, text: "" }
+  readonly property var meetingState: svc ? svc.meetingState : { kind: "none", event: null, title: "", suffix: "", text: "" }
   readonly property bool urgent: svc ? svc.urgent : false
   readonly property bool setupMode: svc ? svc.setupMode : false
-  readonly property string icon: "\u{F0ED}"
-  readonly property string label: setupMode ? "" : meetingState.text
-  property real maxLabelWidth: 220
+  readonly property string icon: "󰃭"
+  readonly property string label: setupMode ? "" : meetingState.title
+  readonly property string suffix: setupMode ? "" : (meetingState.suffix || "")
+  property real maxLabelWidth: 180
 
   visible: svc !== null && (setupMode || (svc.connected && meetingState.kind !== "none"))
   implicitWidth: visible ? row.implicitWidth + Style.space(14) : 0
@@ -110,6 +111,17 @@ BarWidget {
           easing.type: Easing.Linear
         }
       }
+    }
+
+    Text {
+      textFormat: Text.PlainText
+      anchors.verticalCenter: parent.verticalCenter
+      visible: !root.vertical && root.suffix !== ""
+      text: root.suffix
+      color: root.fg
+      font.family: root.bar ? root.bar.fontFamily : Style.font.family
+      font.pixelSize: Style.font.body
+      font.bold: root.urgent
     }
   }
 

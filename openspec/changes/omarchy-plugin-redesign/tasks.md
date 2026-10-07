@@ -19,16 +19,16 @@
 
 ## 4. Bar widget
 
-- [ ] 4.1 `BarWidget.qml`: host the bridge as a `Process`, restart on exit, parse stdout lines into properties; verify the process appears under the shell and reconnects after `kill`
+- [x] 4.1 `BarWidget.qml`: host the bridge as a `Process`, restart on exit, parse stdout lines into properties; verify the process appears under the shell and reconnects after `kill`
 - [x] 4.2 `Model.js`: pure function computing the label state from events, now, inCall, meetingStarted, horizon; verify with a small JS self-check run via `qml` or node covering the scenarios in meeting-bar-widget
-- [ ] 4.3 Render label with urgent colour for "now", capped width with scrolling text, hidden when state is none; verify visually on the bar with a fake calendar
+- [x] 4.3 Render label with urgent colour for "now", capped width with scrolling text, hidden when state is none; verify visually on the bar with a fake calendar
 - [ ] 4.4 Left click opens join URL via `xdg-open`, right click opens the popup; verify both
 - [ ] 4.5 Optional toast via `omarchy-notification-send` on the "now" transition when `settings.toast`; verify one notification per meeting
 - [ ] 4.6 Restart the bridge when `pollMinutes`, `mqttPort` or `mqttPrefix` change; verify the process args update after a settings change
 
 ## 5. Popup
 
-- [ ] 5.1 `Panel.qml`: today's events with Join buttons, connection status line, last bridge error; verify it opens anchored to the widget
+- [x] 5.1 `Panel.qml`: today's events with Join buttons, connection status line, last bridge error; verify it opens anchored to the widget
 - [ ] 5.2 Connect/Disconnect button driven by `teams-config.py status`, with the "restart Teams" hint; verify both actions edit the config and the button flips
 
 ## 6. Integration
