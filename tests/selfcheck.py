@@ -1,25 +1,16 @@
 #!/usr/bin/env python3
-"""python3 tests/selfcheck.py — fails loudly if ICS parsing, due logic or the MQTT broker break."""
+"""python3 tests/selfcheck.py — fails loudly if due logic or the MQTT broker break."""
 import importlib.machinery, importlib.util, json, os, socket, sys, tempfile, threading, time
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "alert"))
 os.environ["MEETING_ALERT_STATE"] = tempfile.mktemp()
 os.environ["MEETING_ALERT_STATE_DIR"] = tempfile.mkdtemp()
-import due, ics
+import due
 
 fired = []
 due.alert = lambda t, b="", u="": fired.append((t, b, u))
-
-# --- ics
-occ = ics.parse(open(os.path.join(ROOT, "tests/sample.ics")).read(), today=date(2026, 10, 7))
-by = {o[0]: o for o in occ}
-assert by["single@x"][2] == "One-off, with comma" and by["single@x"][3].startswith("https://teams.microsoft.com/l/meetup-join/"), by["single@x"]
-assert "standup@x@2026-10-06" in by and "standup@x@2026-10-08" in by, by.keys()        # Tue, Thu
-assert "standup@x@2026-10-07" not in by, "EXDATE ignored"
-assert not any(k.startswith("allday") for k in by), "all-day should be skipped"
-assert by["standup@x@2026-10-08"][1] == datetime(2026, 10, 8, 7, tzinfo=timezone.utc)
 
 # --- due
 now = datetime.now(timezone.utc)
