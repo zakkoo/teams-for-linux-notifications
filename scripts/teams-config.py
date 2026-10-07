@@ -4,7 +4,12 @@ usage: teams-config.py connect|disconnect|status [--port 1883] [--prefix teams] 
 status prints "connected" or "disconnected"; connect/disconnect print the backup path (if any) and exit 0."""
 import argparse, json, os, sys, time
 
-DEFAULT = os.path.expanduser("~/.config/teams-for-linux/config.json")
+CANDIDATES = [  # vanilla, Flatpak, Snap — first existing wins, vanilla when none exists yet
+    "~/.config/teams-for-linux/config.json",
+    "~/.var/app/com.github.IsmaelMartinez.teams_for_linux/config/teams-for-linux/config.json",
+    "~/snap/teams-for-linux/current/.config/teams-for-linux/config.json",
+]
+DEFAULT = next((p for p in map(os.path.expanduser, CANDIDATES) if os.path.exists(p)), os.path.expanduser(CANDIDATES[0]))
 
 
 def managed(port, prefix):

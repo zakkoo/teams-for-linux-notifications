@@ -1,12 +1,18 @@
 # Teams Meetings for Omarchy
 
-Your next Teams meeting, with a countdown, directly in the Omarchy bar.
-When a meeting starts the label turns urgent and stays until you join.
-No banner, no icon to click, nothing to install besides the plugin.
+**Never miss a Teams meeting again because Teams was hidden.**
 
-Teams for Linux publishes your calendar and a "meeting started" signal over
-MQTT. This plugin runs a tiny MQTT broker of its own inside the shell, so
-nothing else is needed on the machine.
+Teams for Linux only reminds you inside its own window. This
+widget puts your next meeting straight into the Omarchy bar.
+
+- **Works out of the box.** It reads the calendar Teams for Linux already has.
+  No Azure app registration, no admin approval, no API keys, no extra programs.
+- **Nothing to configure by hand.** One click connects it to Teams for Linux,
+  every setting lives in the widget's own popup.
+- **Click to join.** Meetings open in Teams for Linux, not in a browser tab.
+  Meetings in a physical room show the room instead.
+
+![Preview](preview.png)
 
 ## Install
 
@@ -14,11 +20,9 @@ nothing else is needed on the machine.
 omarchy plugin add https://github.com/zakkoo/teams-for-linux-notifications.git --enable
 ```
 
-Then **right-click the widget** (it appears once Teams is connected, so right
-after enabling you will find it under the bar's widget settings or at its
-default center slot) and press **Connect Teams for Linux**. That merges the
-needed MQTT keys into `~/.config/teams-for-linux/config.json`, keeping a
-timestamped backup. Restart Teams for Linux once. Done.
+Then **click the small calendar icon** in the center of the bar and press
+**Connect Teams for Linux**. That adds a few lines to Teams for Linux's own
+config file (keeping a timestamped backup). Restart Teams for Linux once. Done.
 
 Move it where you like:
 
@@ -34,14 +38,16 @@ omarchy bar move io.github.zakkoo.teams-for-linux-notifications --section right
 | Meeting started, you have not joined | `󰃰 Standup · now` in the urgent colour, sticky |
 | You are in the call, or nothing upcoming, or Teams closed | nothing |
 
-Left click opens the join link. Right click opens the popup with today's
-meetings, join buttons and the Connect / Disconnect button.
+Left click opens the popup with today's meetings. Right click joins the shown
+meeting directly. Middle click dismisses a meeting you are skipping.
 
 ## Settings
 
-All settings live in the shell's widget settings form (no file editing):
-horizon, toast lead time, optional desktop notification (off by default),
-calendar refresh interval, MQTT port and topic prefix.
+Everything is in the popup under **Settings & connection**: how far ahead the
+next meeting appears (15 minutes by default), how often the calendar is
+checked, an optional pop-up reminder, and, under *Advanced*, the local port
+and message prefix used to talk to Teams for Linux. The same values are also
+editable in the shell's widget settings form.
 
 ## Remove
 
@@ -49,17 +55,18 @@ calendar refresh interval, MQTT port and topic prefix.
 omarchy plugin remove io.github.zakkoo.teams-for-linux-notifications --yes
 ```
 
-Press **Disconnect** in the popup first if you want the MQTT keys taken out
-of Teams' config again. Forgot? Run
+Press **Disconnect** under Settings & connection first if you want the added
+lines taken out of Teams' config again. Forgot? Run
 `python3 scripts/teams-config.py disconnect` from a checkout, or restore the
 `config.json.bak-*` file next to it. Teams with a dangling MQTT config just
 keeps retrying quietly.
 
 ## Requirements
 
-Omarchy 4 shell, Teams for Linux 2.20 or newer with MQTT, Graph API and
-meeting-start detection (the Connect button enables all three). Meeting-start
-detection matches the English Teams UI only; other locales need
+Omarchy 4 shell and Teams for Linux 2.20 or newer, installed as a package,
+Flatpak or Snap (the config file is found automatically). The Connect button
+enables Teams for Linux's MQTT, Graph API and meeting-start detection features.
+Meeting-start detection matches the English Teams UI only; other locales need
 `meetingStartDetection.patterns` in the Teams config.
 
 ## Coming from the proof of concept?

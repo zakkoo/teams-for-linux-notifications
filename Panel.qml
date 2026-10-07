@@ -20,10 +20,16 @@ Panel {
   readonly property color muted: Qt.darker(fg, 1.6)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   property string actionHint: ""
+  property bool settingsOpen: false   // daily use is the meeting list; settings fold away
+  property bool advancedOpen: false
 
   function open() { root.controller.show(); if (w) w.refreshWired(); actionHint = "" }
-  function close() { root.controller.hide() }
+  function close() { root.controller.hide(); settingsOpen = false; advancedOpen = false }
   function toggle() { opened ? close() : open() }
+
+  function save(key, value) {
+    if (hostWidget && typeof hostWidget.saveSetting === "function") hostWidget.saveSetting(key, value)
+  }
 
   Process {
     id: actionProc
@@ -33,16 +39,53 @@ Panel {
     stdout: StdioCollector { waitForEnd: true }
     onExited: function(code) {
       if (w) w.refreshWired()
-      root.actionHint = code !== 0 ? "Could not edit Teams config (see shell log)"
-        : (action === "connect" ? "Written. Restart Teams for Linux to connect." : "Removed. Restart Teams for Linux to apply.")
+      root.actionHint = code !== 0 ? "Could not edit the Teams for Linux config (see shell log)"
+        : (action === "connect" ? "Done. Restart Teams for Linux once and it will connect." : "Removed. Restart Teams for Linux to apply.")
     }
   }
 
-  function save(key, value) {
-    if (hostWidget && typeof hostWidget.saveSetting === "function") hostWidget.saveSetting(key, value)
+  function runAction(a) { if (actionProc.running) return; actionProc.action = a; actionProc.running = true }
+
+  // A labelled number with a one-line explanation underneath.
+  component SettingNumber: Column {
+    property alias label: field.label
+    property alias from: field.from
+    property alias to: field.to
+    property alias value: field.value
+    property string hint: ""
+    signal modified(int value)
+    width: column.width
+    spacing: Style.space(2)
+    NumberField {
+      id: field
+      width: parent.width
+      foreground: root.fg; fontFamily: root.fontFamily
+      onModified: function(v) { parent.modified(v) }
+    }
+    Text {
+      width: parent.width
+      text: parent.hint
+      wrapMode: Text.Wrap
+      color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+    }
   }
 
-  function runAction(a) { if (actionProc.running) return; actionProc.action = a; actionProc.running = true }
+  // Clickable section header with a chevron.
+  component Fold: Item {
+    property string title: ""
+    property bool open: false
+    signal toggled()
+    width: column.width
+    height: foldLabel.implicitHeight + Style.space(8)
+    Text {
+      id: foldLabel
+      anchors.verticalCenter: parent.verticalCenter
+      text: (parent.open ? "▾  " : "▸  ") + parent.title
+      color: foldMouse.containsMouse ? root.fg : root.muted
+      font.family: root.fontFamily; font.pixelSize: Style.font.caption
+    }
+    MouseArea { id: foldMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.toggled() }
+  }
 
   PopupCard {
     id: card
@@ -51,7 +94,7 @@ Panel {
     bar: root.bar
     open: root.opened
     centerOnBar: true
-    contentWidth: card.fittedContentWidth(Style.space(400))
+    contentWidth: card.fittedContentWidth(Style.space(420))
     contentHeight: card.fittedContentHeight(column.implicitHeight)
 
     Column {
@@ -63,7 +106,7 @@ Panel {
 
       Text {
         visible: !w || w.events.length === 0
-        text: "No meetings today"
+        text: w && w.connected ? "No meetings today" : "Waiting for Teams for Linux…"
         color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.body
       }
 
@@ -74,6 +117,8 @@ Panel {
           required property var modelData
           readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
           readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : root.fg
+          readonly property string location: modelData.location || ""
+          readonly property bool joinable: (modelData.joinUrl || "") !== ""
           width: column.width
           height: Math.max(timeText.implicitHeight, joinBtn.implicitHeight)
           Text {
@@ -87,8 +132,8 @@ Panel {
           Text {
             anchors.left: timeText.right
             anchors.leftMargin: Style.space(10)
-            anchors.right: joinBtn.visible ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
-            anchors.rightMargin: joinBtn.visible || locationText.visible ? Style.space(10) : 0
+            anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
+            anchors.rightMargin: rowItem.joinable || locationText.visible ? Style.space(10) : 0
             anchors.verticalCenter: parent.verticalCenter
             text: rowItem.modelData.subject
             elide: Text.ElideRight
@@ -100,19 +145,25 @@ Panel {
             id: locationText
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            visible: !joinBtn.visible && (rowItem.modelData.location || "") !== ""
-            text: rowItem.modelData.location || ""
+            visible: !rowItem.joinable && rowItem.location !== ""
+            text: rowItem.location
             elide: Text.ElideRight
-            width: Math.min(implicitWidth, Style.space(140))
+            width: Math.min(implicitWidth, Style.space(150))
             color: root.muted
             font.family: root.fontFamily; font.pixelSize: Style.font.caption
+            MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+            PanelToolTip {
+              visible: locationMouse.containsMouse && locationText.truncated
+              text: rowItem.location
+              fontFamily: root.fontFamily
+            }
           }
           Button {
             id: joinBtn
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: "Join"
-            visible: (rowItem.modelData.joinUrl || "") !== ""
+            visible: rowItem.joinable
             fontFamily: root.fontFamily
             foreground: root.fg
             bordered: true
@@ -121,81 +172,89 @@ Panel {
         }
       }
 
-
       PanelSeparator {}
 
-      PanelSectionHeader { text: "Settings"; foreground: root.muted; fontFamily: root.fontFamily }
+      Fold { title: "Settings & connection"; open: root.settingsOpen; onToggled: root.settingsOpen = !root.settingsOpen }
 
-      NumberField {
+      Column {
+        visible: root.settingsOpen
         width: column.width
-        label: "Show upcoming meetings within (min)"
-        from: 1; to: 240
-        value: root.setting("horizonMinutes", 15)
-        foreground: root.fg; fontFamily: root.fontFamily
-        onModified: function(v) { root.save("horizonMinutes", v) }
-      }
-      NumberField {
-        width: column.width
-        label: "Refresh calendar every (min)"
-        from: 1; to: 60
-        value: root.setting("pollMinutes", 5)
-        foreground: root.fg; fontFamily: root.fontFamily
-        onModified: function(v) { root.save("pollMinutes", v) }
-      }
-      Toggle {
-        width: column.width
-        label: "Desktop notification"
-        description: "One toast per meeting, in addition to the bar."
-        checked: root.setting("toast", false) === true
-        foreground: root.fg; fontFamily: root.fontFamily
-        titleSize: Style.font.body
-        onClicked: root.save("toast", !checked)
-      }
-      NumberField {
-        width: column.width
-        visible: root.setting("toast", false) === true
-        label: "Notify minutes before start"
-        from: 0; to: 60
-        value: root.setting("leadMinutes", 2)
-        foreground: root.fg; fontFamily: root.fontFamily
-        onModified: function(v) { root.save("leadMinutes", v) }
-      }
-      NumberField {
-        width: column.width
-        label: "MQTT port (then Connect again)"
-        from: 1024; to: 65535
-        value: root.setting("mqttPort", 1883)
-        foreground: root.fg; fontFamily: root.fontFamily
-        onModified: function(v) { root.save("mqttPort", v) }
-      }
-      Row {
-        width: column.width
-        spacing: Style.space(8)
+        spacing: Style.space(10)
+
+        SettingNumber {
+          label: "Show the next meeting this many minutes ahead"
+          from: 1; to: 240
+          value: root.setting("horizonMinutes", 15)
+          hint: "The bar stays empty until a meeting is this close. 15 means you see it a quarter of an hour before it starts."
+          onModified: function(v) { root.save("horizonMinutes", v) }
+        }
+        SettingNumber {
+          label: "Check the calendar every (minutes)"
+          from: 1; to: 60
+          value: root.setting("pollMinutes", 5)
+          hint: "How often new or moved meetings are picked up from Teams. 5 is plenty; lower only if your calendar changes constantly."
+          onModified: function(v) { root.save("pollMinutes", v) }
+        }
+        Toggle {
+          width: parent.width
+          label: "Pop-up reminder as well"
+          description: "Besides the bar, show a normal desktop notification once per meeting. Off keeps everything in the bar."
+          checked: root.setting("toast", false) === true
+          foreground: root.fg; fontFamily: root.fontFamily
+          titleSize: Style.font.body
+          onClicked: root.save("toast", !checked)
+        }
+        SettingNumber {
+          visible: root.setting("toast", false) === true
+          label: "Remind me this many minutes before the start"
+          from: 0; to: 60
+          value: root.setting("leadMinutes", 2)
+          hint: "When the pop-up reminder appears. 0 means right when the meeting starts."
+          onModified: function(v) { root.save("leadMinutes", v) }
+        }
+
+        Toggle {
+          width: parent.width
+          label: "Advanced settings"
+          description: "Connection details between Teams for Linux and this widget. The defaults work; change them only if something else already uses them."
+          checked: root.advancedOpen
+          foreground: root.fg; fontFamily: root.fontFamily
+          titleSize: Style.font.body
+          onClicked: root.advancedOpen = !root.advancedOpen
+        }
+        SettingNumber {
+          visible: root.advancedOpen
+          label: "Local port Teams for Linux talks to"
+          from: 1024; to: 65535
+          value: root.setting("mqttPort", 1883)
+          hint: "Only reachable from this computer. After changing it, press Connect again and restart Teams for Linux."
+          onModified: function(v) { root.save("mqttPort", v) }
+        }
+        Row {
+          visible: root.advancedOpen
+          width: parent.width
+          spacing: Style.space(8)
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Message prefix"
+            color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.body
+          }
+          TextField {
+            width: Style.space(120)
+            text: String(root.setting("mqttPrefix", "teams"))
+            foreground: root.fg
+            onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", "teams"))) root.save("mqttPrefix", text.trim())
+          }
+        }
+
+        PanelSeparator {}
+
         Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: "MQTT topic prefix"
-          color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.body
+          width: parent.width
+          text: w ? w.statusText() : ""
+          wrapMode: Text.Wrap
+          color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
         }
-        TextField {
-          id: prefixField
-          width: Style.space(120)
-          text: String(root.setting("mqttPrefix", "teams"))
-          foreground: root.fg
-          onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", "teams"))) root.save("mqttPrefix", text.trim())
-        }
-      }
-
-      PanelSeparator {}
-
-      Text {
-        width: column.width
-        text: w ? w.statusText() : ""
-        wrapMode: Text.Wrap
-        color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
-      }
-
-      Row {
-        spacing: Style.space(8)
         Button {
           text: w && w.teamsWired ? "Disconnect Teams for Linux" : "Connect Teams for Linux"
           fontFamily: root.fontFamily
@@ -204,10 +263,27 @@ Panel {
           enabled: !actionProc.running
           onClicked: root.runAction(w && w.teamsWired ? "disconnect" : "connect")
         }
+        Text {
+          visible: root.actionHint !== ""
+          width: parent.width
+          text: root.actionHint
+          wrapMode: Text.Wrap
+          color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        }
       }
 
+      // Setup needed: surface the Connect button without opening the fold.
+      Button {
+        visible: !root.settingsOpen && w && !w.teamsWired
+        text: "Connect Teams for Linux"
+        fontFamily: root.fontFamily
+        foreground: root.fg
+        bordered: true
+        enabled: !actionProc.running
+        onClicked: root.runAction("connect")
+      }
       Text {
-        visible: root.actionHint !== ""
+        visible: !root.settingsOpen && root.actionHint !== ""
         width: column.width
         text: root.actionHint
         wrapMode: Text.Wrap
