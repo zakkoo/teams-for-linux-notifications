@@ -33,7 +33,11 @@
 - [x] 5.4 Popup list: latest first, finished rows dimmed, hide-finished toggle, five-row scroll cap, location tooltip, collapsible settings with advanced section, version label; verify by screenshot
 - [ ] 5.2 Connect/Disconnect button driven by `teams-config.py status`, with the "restart Teams" hint; verify both actions edit the config and the button flips
 
-## 6. Integration
+## 6. Tests in CI
 
-- [ ] 6.1 Install from the GitHub URL with `omarchy plugin add ... --enable --yes`, Connect, restart Teams; verify the widget shows a real upcoming event and goes sticky at start time
-- [ ] 6.2 Remove with `omarchy plugin remove ... --yes`; verify bridge gone and Disconnect restores the config
+- [x] 6.0 `tests/manifest-check.py` mirroring the shell's validation plus schema/defaults consistency, and a GitHub Actions workflow running all three checks; verify the scripts pass locally
+
+## 7. Integration
+
+- [ ] 7.1 Install from the GitHub URL with `omarchy plugin add ... --enable --yes`, Connect, restart Teams; verify the widget shows a real upcoming event and goes sticky at start time
+- [ ] 7.2 Remove with `omarchy plugin remove ... --yes`; verify bridge gone and Disconnect restores the config

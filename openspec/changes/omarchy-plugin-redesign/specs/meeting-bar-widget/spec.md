@@ -92,6 +92,10 @@ The popup SHALL list today's meetings latest first, show at most five rows befor
 - **WHEN** a meeting's end time has passed
 - **THEN** its row is dimmed and struck through, keeping its Join button or location
 
+#### Scenario: Cut title or location
+- **WHEN** a meeting title or location is cut in the popup and the user hovers it
+- **THEN** a tooltip shows the full text
+
 #### Scenario: Hide finished
 - **WHEN** the user clicks "Hide N finished"
 - **THEN** finished meetings disappear from the list and stay hidden on later opens until "Show N finished" is clicked

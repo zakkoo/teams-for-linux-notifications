@@ -12,7 +12,7 @@ widget puts your next meeting straight into the Omarchy bar.
 - **Click to join.** Meetings open in Teams for Linux, not in a browser tab.
   Meetings in a physical room show the room instead.
 
-![Preview](preview.gif)
+![Preview](preview.png)
 
 ## Install
 
@@ -84,6 +84,11 @@ card uses; `preview.gif` is the animated preview in this README.
 ## Development
 
 ```bash
-python3 tests/selfcheck.py          # broker, due logic, config helper
-omarchy plugin validate .           # manifest
+python3 tests/manifest-check.py     # manifest rules, schema/defaults consistency, no symlinks
+python3 tests/selfcheck.py          # MQTT bridge, calendar parsing, Teams config helper
+node tests/model-check.js           # bar label state machine against the spec scenarios
+omarchy plugin validate .           # the shell's own manifest check (needs Omarchy)
 ```
+
+The same three scripts run in GitHub Actions on every push. The QML itself is
+exercised by installing the plugin; the shell has no headless test runner.

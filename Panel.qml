@@ -164,6 +164,7 @@ Panel {
                 font.family: root.fontFamily; font.pixelSize: Style.font.body
               }
               Text {
+                id: subjectText
                 anchors.left: timeText.right
                 anchors.leftMargin: Style.space(10)
                 anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
@@ -175,6 +176,12 @@ Panel {
                 font.family: root.fontFamily; font.pixelSize: Style.font.body
                 font.bold: rowItem.isCurrent
                 font.strikeout: rowItem.past
+                MouseArea { id: subjectMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+                PanelToolTip {
+                  visible: subjectMouse.containsMouse && subjectText.truncated
+                  text: rowItem.modelData.subject
+                  fontFamily: root.fontFamily
+                }
               }
               Text {
                 id: locationText
