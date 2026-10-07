@@ -86,6 +86,12 @@ class QmlContracts(unittest.TestCase):
         self.assertIn('"status"', self.svc)
         self.assertRegex(self.panel, r'"connect"|"disconnect"')
 
+    def test_toast_keeps_subject_and_url_out_of_argv(self):
+        toast = self.svc[self.svc.index("onMeetingStateChanged"):self.svc.index("function join")]
+        self.assertNotRegex(toast, r"command:.*event\.(subject|joinUrl)", "private data must not be an argv word")
+        self.assertRegex(toast, r"environment:\s*\{[^}]*event\.subject")
+        self.assertRegex(toast, r"environment:\s*\{[^}]*event\.joinUrl")
+
     def test_referenced_files_exist(self):
         for src in (self.bw, self.panel, self.svc):
             for ref in re.findall(r'(?:Qt\.resolvedUrl|import)\s*\(?\s*"([^"]+\.(?:qml|js))"', src):

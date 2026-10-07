@@ -71,11 +71,15 @@ The widget SHALL occupy no space while Teams for Linux is not connected to the b
 - **THEN** the widget disappears within 10 seconds, regardless of pending events
 
 ### Requirement: Optional toast
-When the toast setting is enabled, the widget SHALL send one desktop notification per meeting on the transition into the "now" state, and none otherwise.
+When the toast setting is enabled, the widget SHALL send one desktop notification per meeting on the transition into the "now" state, and none otherwise. The meeting subject and join URL SHALL NOT appear in any process's argv (they are passed through the process environment, which only the owning user can read).
 
 #### Scenario: Toast enabled
 - **WHEN** toast is on and an event enters the "now" state
 - **THEN** exactly one notification with the subject is sent
+
+#### Scenario: Subject hidden from other local users
+- **WHEN** a toast is being sent
+- **THEN** `ps`/`/proc/*/cmdline` on the notification process shows neither the subject nor the join URL
 
 #### Scenario: Toast disabled (default)
 - **WHEN** toast is off and an event enters the "now" state
