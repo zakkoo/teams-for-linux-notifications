@@ -7,8 +7,9 @@
   "license": "MIT",
   "homepage": "https://github.com/zakkoo/teams-for-linux-notifications",
   "description": "Your next Teams meeting and its countdown in the bar, sticky when it starts, gone when you join.",
-  "kinds": ["bar-widget"],
+  "kinds": ["service", "bar-widget"],
   "entryPoints": {
+    "service": "Service.qml",
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {

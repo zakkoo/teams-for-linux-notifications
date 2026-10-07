@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "." as Plugin
 import "Model.js" as Model
 
 Panel {
@@ -14,7 +15,7 @@ Panel {
   property var anchorItem: null
   property var hostWidget: null
   readonly property var barIdentity: hostWidget || root
-  readonly property var w: hostWidget
+  readonly property var w: Plugin.ServiceRegistry.instance
   readonly property color fg: bar ? bar.barForeground : Color.foreground
   readonly property color muted: Qt.darker(fg, 1.6)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
@@ -23,15 +24,6 @@ Panel {
   function open() { root.controller.show(); if (w) w.refreshWired(); actionHint = "" }
   function close() { root.controller.hide() }
   function toggle() { opened ? close() : open() }
-
-  function statusText() {
-    if (!w) return ""
-    if (w.bridgeError) return w.bridgeError
-    if (!w.bridgeAlive) return "Starting bridge…"
-    if (!w.connected) return w.teamsWired ? "Waiting for Teams for Linux (is it running?)" : "Teams for Linux is not connected yet"
-    if (w.events.length === 0) return "Connected · no calendar received yet"
-    return "Connected"
-  }
 
   Process {
     id: actionProc
@@ -111,7 +103,7 @@ Panel {
 
       Text {
         width: column.width
-        text: root.statusText()
+        text: w ? w.statusText() : ""
         wrapMode: Text.Wrap
         color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
       }
