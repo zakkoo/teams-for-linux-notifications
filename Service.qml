@@ -66,14 +66,13 @@ Item {
     if (!toast || !meetingState.event || toasted[meetingState.event.id]) return
     if (!Model.toastDue(meetingState, nowMs, leadMinutes)) return
     var t = toasted; t[meetingState.event.id] = true; toasted = t
-    // Subject and join URL travel in the environment, not argv: /proc/<pid>/cmdline
-    // is world-readable, /proc/<pid>/environ is owner-only.
-    Quickshell.execDetached({
-      command: ["sh", "-c",
-        'exec omarchy-notification-send -u critical --app-name "Teams Meetings" "$1" "$SUBJECT" ${JOIN_URL:+--exec teams-for-linux "$JOIN_URL"}',
-        "_", meetingState.kind === "now" ? "Meeting now" : "Meeting in " + meetingState.minutes + " min"],
-      environment: { SUBJECT: meetingState.event.subject, JOIN_URL: meetingState.event.joinUrl || "" }
-    })
+    // The subject never reaches the toast: omarchy-notification-send ends in a
+    // busctl call, so any text handed to it is world-readable in /proc/<pid>/cmdline.
+    // The bar and popup already show which meeting it is.
+    var cmd = ["omarchy-notification-send", "-u", "critical", "--app-name", "Teams Meetings",
+      meetingState.kind === "now" ? "Teams meeting now" : "Teams meeting in " + meetingState.minutes + " min"]
+    if (meetingState.event.joinUrl) cmd.push("Click to join", "--exec", "teams-for-linux", meetingState.event.joinUrl)
+    Quickshell.execDetached(cmd)
   }
 
   // Teams for Linux forwards argv to its running instance and opens meetup-join
