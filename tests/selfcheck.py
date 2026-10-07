@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "alert"))
 os.environ["MEETING_ALERT_STATE"] = tempfile.mktemp()
+os.environ["MEETING_ALERT_STATE_DIR"] = tempfile.mkdtemp()
 import due, ics
 
 fired = []

@@ -3,6 +3,7 @@
 # usage: alert.sh <title> [body] [join-url]
 set -uo pipefail
 title=$1 body=${2:-} url=${3:-}
+mkdir -p ~/.local/state && echo "$(date -Is) $title | $body | $url" >>~/.local/state/meeting-alert.log
 
 args=(-u critical -g 󰍹 --app-name meeting-alert -t 0 "$title" "$body")
 [[ -n $url ]] && args+=(--exec xdg-open "$url")

@@ -6,7 +6,7 @@ Try them, keep one, run `./keep.sh <name>` to delete the rest.
 
 ## Layout
 ```
-alert/alert.sh      the visible thing — edit this to build your own
+alert/alert.sh      the visible thing — edit this to build your own; every firing is appended to ~/.local/state/meeting-alert.log
 alert/due.py        config loading, "fire once N min before start" logic, Graph JSON parsing
 alert/ics.py        ICS parsing (only 07/08 need it)
 sources/NN-name/    one self-contained option: ./start (foreground, logs to stderr) + README.md

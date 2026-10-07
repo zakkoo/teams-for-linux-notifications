@@ -1,6 +1,7 @@
 """Shared bits: config loading, firing alert.sh, and 'fire once when an event is due'."""
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -69,7 +70,8 @@ def parse_graph_events(data):
             start = datetime.fromisoformat(raw).replace(tzinfo=tz).astimezone(timezone.utc)
         except ValueError:
             continue
-        url = (e.get("onlineMeeting") or {}).get("joinUrl") or e.get("webLink") or ""
+        m = re.search(r"https://teams\.microsoft\.com/\S+", e.get("bodyPreview") or "")
+        url = (e.get("onlineMeeting") or {}).get("joinUrl") or (m and m.group(0)) or e.get("webLink") or ""
         out.append((e.get("id") or raw, start, e.get("subject") or "(no subject)", url))
     return out
 
