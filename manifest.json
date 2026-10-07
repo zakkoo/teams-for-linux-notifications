@@ -3,10 +3,10 @@
   "id": "io.github.zakkoo.teams-for-linux-notifications",
   "name": "Teams Meetings",
   "version": "0.1.2",
-  "author": "Zakaria Agoulif",
+  "author": "zakkoo",
   "license": "MIT",
   "homepage": "https://github.com/zakkoo/teams-for-linux-notifications",
-  "description": "Your next Teams meeting and its countdown in the bar, sticky when it starts, gone when you join.",
+  "description": "Never miss a Teams meeting again. Your next meeting and its countdown live in the Omarchy bar, turn urgent when it starts and stay until you join. Reads the calendar Teams for Linux already has, no Azure setup or API keys. Click to join in Teams for Linux, optional desktop reminder.",
   "kinds": [
     "service",
     "bar-widget"
