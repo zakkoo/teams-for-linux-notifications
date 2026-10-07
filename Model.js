@@ -42,11 +42,15 @@ function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin
   return { kind: "none", event: null, title: "", suffix: "", text: "" }
 }
 
-// Toast is due when the state is "now" or the event starts within leadMin.
+// Toast is due when the state is "now" or the event starts within leadMin,
+// but never for a meeting already running for a while: a shell restart must
+// not re-announce the meeting you are sitting in.
 function toastDue(state, nowMs, leadMin) {
   if (!state.event) return false
+  var start = Date.parse(state.event.start)
+  if (nowMs - start > NOW_MATCH_MS) return false
   if (state.kind === "now") return true
-  return state.kind === "upcoming" && Date.parse(state.event.start) - nowMs <= leadMin * 60000
+  return state.kind === "upcoming" && start - nowMs <= leadMin * 60000
 }
 
 function fmtTime(iso) {

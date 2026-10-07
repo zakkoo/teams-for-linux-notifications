@@ -24,4 +24,5 @@ assert.equal(S([ev("Standup", -1)], { dismissed: { Standup: true } }).kind, "non
 assert.equal(M.toastDue(S([ev("X", 2)]), now, 2), true)
 assert.equal(M.toastDue(S([ev("X", 3)]), now, 2), false)
 assert.equal(M.toastDue(S([ev("X", -1)]), now, 0), true)
+assert.equal(M.toastDue(S([ev("X", -30, 60)]), now, 0), false)   // long running: no re-announce after restart
 console.log("model-check ok")
