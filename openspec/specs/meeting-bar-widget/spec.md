@@ -125,7 +125,7 @@ Titles wider than the label area SHALL never widen the bar. Depending on the scr
 - **THEN** the title is cut with an ellipsis and hovering shows the full title
 
 ### Requirement: Reminder card
-When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for every meeting whose time to start is at most the lead time or that is in the "now" state, each meeting judged on its own. Cards SHALL stack soonest-start first, at most three at a time; a further due meeting SHALL get a card as soon as one of the three is gone. A card SHALL show the meeting subject and the time to start (or "now"). It SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. A card SHALL stay until one of its buttons is pressed, its meeting is dismissed elsewhere, the user is in that meeting's call, or its meeting ends. Being in a call exempts only the meeting the call belongs to; other meetings still get their cards. Clicking a card anywhere outside its buttons SHALL do nothing. The lead time SHALL be capped at the horizon, since a meeting outside the horizon is never shown.
+When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for every meeting whose time to start is at most the lead time or that is in the "now" state, each meeting judged on its own. The judgement for one meeting SHALL depend only on that meeting's times, the current time, and whether a meeting-started pulse adopts it; a pulse that matches no event, or a different event, SHALL NOT hold back any other meeting's card. Cards SHALL stack soonest-start first, at most three at a time; a further due meeting SHALL get a card as soon as one of the three is gone. A card SHALL show the meeting subject and the time to start (or "now"). It SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. A card SHALL stay until one of its buttons is pressed, its meeting is dismissed elsewhere, the user is in that meeting's call, or its meeting ends. Being in a call exempts only the meeting the call belongs to; other meetings still get their cards. Clicking a card anywhere outside its buttons SHALL do nothing. The lead time SHALL be capped at the horizon, since a meeting outside the horizon is never shown.
 
 #### Scenario: Card appears at the lead time
 - **WHEN** the reminder is on, the lead time is 15 minutes, and "Standup" with a join link starts in 15 minutes
@@ -163,8 +163,16 @@ When the reminder setting is enabled, the widget SHALL show a reminder card as a
 - **WHEN** the reminder is off and a meeting reaches the lead time or starts
 - **THEN** no card is shown
 
+#### Scenario: Unmatched pulse does not hold back a card
+- **WHEN** Teams sends a meeting-started pulse that matches no event within 5 minutes, the bar shows "Meeting started", and Planning starts in 8 minutes with a lead time of 10
+- **THEN** Planning's card reading "Planning in 8 min" appears regardless of the pulse
+
+#### Scenario: Pulse adopts one meeting only
+- **WHEN** a meeting-started pulse arrives and two meetings start within 5 minutes of now
+- **THEN** only the earlier one is shown in the "now" form; the later one keeps its countdown and its Remind-me button
+
 ### Requirement: Reminder card buttons
-Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as the widget's right-click) and close the card for good. Dismiss on a card before the start SHALL close that card only; the meeting SHALL still get its card at the start. Dismiss on a started meeting's card SHALL skip the meeting exactly as a middle-click on the widget does. A skipped meeting SHALL appear dimmed in the popup with a one-click restore. Once the user has been in a meeting's call and left it, that meeting SHALL count as handled: no card returns and the bar does not turn urgent for it. Remind-me SHALL close the card and show it again after half the remaining time to the start, rounded down to whole minutes and never less than one; the button label SHALL state that number of minutes. Each time the card reappears, the countdown and the Remind-me interval SHALL be recomputed from the then-remaining time.
+Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as the widget's right-click) and close the card for good. Dismiss on a card before the start SHALL close that card only; the meeting SHALL still get its card at the start. Dismiss on a started meeting's card SHALL skip the meeting exactly as a middle-click on the widget does. A skipped meeting SHALL appear dimmed in the popup with a one-click restore. Once the user has been in a meeting's call and left it, that meeting SHALL count as handled: no card returns and the bar does not turn urgent for it. The meeting a call belongs to SHALL be fixed when the call starts (or, when the calendar arrives later, the first time a meeting matches during that call) and SHALL NOT change for the rest of the call, even when its end time passes while the call continues. Remind-me SHALL close the card and show it again after half the remaining time to the start, rounded down to whole minutes and never less than one; the button label SHALL state that number of minutes. Each time the card reappears, the countdown and the Remind-me interval SHALL be recomputed from the then-remaining time.
 
 #### Scenario: Halving snooze chain
 - **WHEN** the card says "in 15 min" and the user presses "Remind me in 7 min"
@@ -189,6 +197,10 @@ Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as
 #### Scenario: Left the call
 - **WHEN** Teams reports the call for Standup ended while Standup is still running
 - **THEN** the bar does not turn urgent for Standup and no card appears for it
+
+#### Scenario: Call overruns into the next meeting
+- **WHEN** the user is in the call for Standup (10:00–10:30), stays in it until 10:40, and Planning is scheduled 10:30–11:00
+- **THEN** leaving the call marks only Standup as handled; Planning turns the bar urgent and gets its card as if the user had never been in a call
 
 #### Scenario: Join
 - **WHEN** the user presses Join
