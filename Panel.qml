@@ -177,6 +177,7 @@ Panel {
                 anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
                 anchors.rightMargin: rowItem.joinable || locationText.visible ? Style.space(10) : 0
                 anchors.verticalCenter: parent.verticalCenter
+                textFormat: Text.PlainText
                 text: rowItem.modelData.subject
                 elide: Text.ElideRight
                 color: rowItem.rowColor
@@ -195,6 +196,7 @@ Panel {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 visible: (rowItem.modelData.joinUrl || "") === "" && rowItem.location !== ""
+                textFormat: Text.PlainText
                 text: rowItem.location
                 elide: Text.ElideRight
                 width: Math.min(implicitWidth, Style.space(150))

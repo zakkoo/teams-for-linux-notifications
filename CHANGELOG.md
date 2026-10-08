@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4
+
+Meeting subjects and locations in the popup are rendered as plain text. Qt's
+default AutoText treated invitation markup as rich text, which could fetch
+attacker-chosen image URLs (marketplace review,
+omarchy-plugin-marketplace#10443).
+
 ## 0.1.3
 
 The calendar icon now stays in the bar at all times. Before, the widget

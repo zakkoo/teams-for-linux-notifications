@@ -115,6 +115,12 @@ class QmlContracts(unittest.TestCase):
         for fn in ("open", "close", "closeForPopoutSwitch"):
             self.assertIn(f"function {fn}()", self.bw)
 
+    def test_calendar_text_is_plain(self):
+        # Subject and location come from external invitations; AutoText would render markup and fetch image URLs.
+        for item in ("subjectText", "locationText"):
+            block = re.search(rf"id: {item}\n(.*?)\n\s+MouseArea", self.panel, re.S).group(1)
+            self.assertIn("textFormat: Text.PlainText", block, item)
+
     def test_braces_balanced(self):
         for name in ("BarWidget.qml", "Panel.qml", "Service.qml", "ServiceRegistry.qml", "Model.js"):
             src = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*', "", read(name))
