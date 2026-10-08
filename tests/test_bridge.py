@@ -1,6 +1,6 @@
-"""The stdlib MQTT bridge: framing, both protocol levels, topic handling, state lines."""
-import json, socket, subprocess, sys, unittest
-from datetime import datetime, timedelta, timezone
+"""The stdlib MQTT bridge: framing, both protocol levels, topic handling, state lines, client drops."""
+import json, socket, subprocess, sys, threading, time, unittest
+from datetime import datetime, timedelta
 
 from _bridge_helpers import ROOT, FakeTeams, load_script
 
@@ -14,9 +14,17 @@ class Framing(unittest.TestCase):
             enc = self.b.varint(n)
             self.assertEqual(self.b.rdvar(enc, 0), (n, len(enc)), n)
 
+    def test_varint_longer_than_four_bytes_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.b.rdvar(b"\x80\x80\x80\x80\x01", 0)
+
     def test_mkstr_rdstr_roundtrip_unicode(self):
         s = "teams/Zürich ✓"
         self.assertEqual(self.b.rdstr(self.b.mkstr(s) + b"tail", 0), (s, 2 + len(s.encode())))
+
+    def test_rdstr_truncated_raises(self):
+        with self.assertRaises(ValueError):
+            self.b.rdstr(b"\x00\x10abc", 0)
 
     def test_read_packet_on_closed_socket_is_none(self):
         a, b = socket.socketpair()
@@ -29,14 +37,22 @@ class Framing(unittest.TestCase):
         a.sendall(bytes([0x30]) + self.b.varint(len(payload)) + payload)
         self.assertEqual(self.b.read_packet(b), (3, 0, payload))
 
+    def test_read_packet_remaining_length_beyond_four_bytes_is_none(self):
+        a, b = socket.socketpair()
+        a.sendall(bytes([0x30]) + b"\x80\x80\x80\x80\x01")
+        self.assertIsNone(self.b.read_packet(b))
+
 
 class Protocol(unittest.TestCase):
-    """Run every scenario against MQTT 3.1.1 and MQTT 5."""
+    """Run every scenario against MQTT 3.1.1 and MQTT 5, each on a fresh Broker."""
 
     def setUp(self):
         self.b = load_script("bridge")
+
+    def fresh(self):
         self.lines = []
-        self.b.print = lambda line, **kw: self.lines.append(line)  # capture the real emit's stdout, dedupe included
+        self.broker = self.b.Broker(out=self.lines.append)  # the real emit, dedupe included
+        return self.broker
 
     def last(self):
         return json.loads(self.lines[-1])
@@ -45,10 +61,7 @@ class Protocol(unittest.TestCase):
         def run(self):
             for v5 in (False, True):
                 with self.subTest(mqtt5=v5):
-                    self.lines.clear()
-                    self.b.state.update(connected=False, inCall=False, meetingStarted=False, error="", events=[])
-                    self.b.PREFIX = "teams"
-                    test(self, FakeTeams(self.b, v5))
+                    test(self, FakeTeams(self.b, self.fresh(), v5))
         return run
 
     @both
@@ -155,6 +168,54 @@ class Protocol(unittest.TestCase):
         self.assertEqual(len(self.lines), n)
         t.disconnect()
 
+    @both
+    def test_malformed_packet_drops_only_that_client(self, t):
+        t.connect(); t.subscribe("teams/command"); t.read_publish()
+        t.send(0x82, b"\x00\x02" + t.props + b"\x00\x40trunc" + b"\x00")  # SUBSCRIBE whose topic claims 64 bytes
+        t.thread.join(3)
+        self.assertFalse(t.thread.is_alive(), "the serving thread ends instead of crashing the process")
+        self.assertFalse(self.last()["connected"])
+        self.assertIsNone(self.broker.client)
+        again = FakeTeams(self.b, self.broker, t.v5)  # the same broker serves the next client as if nothing happened
+        again.connect(); again.subscribe("teams/command")
+        self.assertEqual(again.read_publish()[1]["action"], "get-calendar")
+        self.assertTrue(self.last()["connected"])
+        again.disconnect()
+
+    @both
+    def test_undecodable_topic_drops_only_that_client(self, t):
+        t.connect(); t.subscribe("teams/command"); t.read_publish()
+        t.send(0x30, b"\x00\x02\xff\xfe" + t.props + b"x")  # PUBLISH with a topic that is not UTF-8
+        t.thread.join(3)
+        self.assertFalse(t.thread.is_alive())
+        self.assertFalse(self.last()["connected"])
+
+
+class PollThread(unittest.TestCase):
+    """request_calendar runs on the ticker thread and must survive the client vanishing under it."""
+
+    def setUp(self):
+        self.b = load_script("bridge")
+
+    def test_client_cleared_between_check_and_publish_does_not_raise(self):
+        broker = self.b.Broker(out=lambda line: None)
+
+        class Vanishing:
+            subs = {"teams/command"}
+
+            def publish(self_, topic, payload):
+                broker.client = None  # the accept loop dropped it meanwhile
+                raise OSError("Broken pipe")
+
+        broker.client = Vanishing()
+        broker.request_calendar()  # must not propagate
+        self.assertIsNone(broker.client)
+        broker.request_calendar()  # and a missing client is simply skipped
+
+    def test_no_client_is_a_no_op(self):
+        broker = self.b.Broker(out=lambda line: None)
+        broker.request_calendar()
+
 
 class Process(unittest.TestCase):
     """The real executable: startup line, argument handling, port conflict."""
@@ -187,43 +248,66 @@ class Process(unittest.TestCase):
 
 
 class EndToEndSocket(unittest.TestCase):
-    """A real TCP client against the real server loop: sequential clients, connected flips on drop."""
+    """A real TCP client against the real accept loop: sequential clients, connected flips on drop, silent clients time out."""
+
+    def setUp(self):
+        self.b = load_script("bridge")
+        self.lines = []
+        self.broker = self.b.Broker(out=lambda line: self.lines.append(json.loads(line)))
+        self.srv = socket.create_server(("127.0.0.1", 0)); self.port = self.srv.getsockname()[1]
+        self.thread = threading.Thread(target=self.broker.serve_forever, args=(self.srv,), daemon=True); self.thread.start()
+
+    def tearDown(self):
+        self.srv.close()
+
+    def raw_connect(self, keepalive=60):
+        c = socket.create_connection(("127.0.0.1", self.port)); c.settimeout(3)
+        body = self.b.mkstr("MQTT") + b"\x04\x02" + keepalive.to_bytes(2, "big") + self.b.mkstr("t")
+        c.sendall(bytes([0x10]) + self.b.varint(len(body)) + body)
+        self.assertEqual(self.b.read_packet(c)[0], 2)
+        return c
+
+    def subscribe(self, c):
+        sub = b"\x00\x01" + self.b.mkstr("teams/command") + b"\x00"
+        c.sendall(bytes([0x82]) + self.b.varint(len(sub)) + sub)
+        self.assertEqual(self.b.read_packet(c)[0], 9)
+        self.assertEqual(self.b.read_packet(c)[0], 3)
+
+    def wait_disconnected(self, timeout):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.lines and not self.lines[-1]["connected"]:
+                return True
+            time.sleep(0.05)
+        return False
 
     def test_second_client_after_first_drops(self):
-        b = load_script("bridge")
-        lines = []
-        b.emit = lambda **c: (b.state.update(c), lines.append(dict(b.state)))
-        srv = socket.create_server(("127.0.0.1", 0)); port = srv.getsockname()[1]
-
-        def serve_two():
-            for _ in range(2):
-                sock, _ = srv.accept()
-                b.client = b.Client(sock)
-                try:
-                    b.client.serve()
-                except OSError:
-                    pass
-                finally:
-                    sock.close(); b.client = None
-                    b.emit(connected=False, inCall=False, meetingStarted=False)
-
-        import threading
-        th = threading.Thread(target=serve_two, daemon=True); th.start()
         for _ in range(2):
-            c = socket.create_connection(("127.0.0.1", port)); c.settimeout(3)
-            c.sendall(bytes([0x10]) + b.varint(len(body := b.mkstr("MQTT") + b"\x04\x02\x00\x3c" + b.mkstr("t"))) + body)
-            self.assertEqual(b.read_packet(c)[0], 2)
-            sub = b"\x00\x01" + b.mkstr("teams/command") + b"\x00"
-            c.sendall(bytes([0x82]) + b.varint(len(sub)) + sub)
-            self.assertEqual(b.read_packet(c)[0], 9)
-            self.assertEqual(b.read_packet(c)[0], 3)
-            self.assertTrue(lines[-1]["connected"])
+            c = self.raw_connect()
+            self.subscribe(c)
+            self.assertTrue(self.lines[-1]["connected"])
             c.close()  # drop without DISCONNECT
-            th.join(0.5) if False else None
-            import time; time.sleep(0.2)
-            self.assertFalse(lines[-1]["connected"])
-        th.join(3)
-        srv.close()
+            self.assertTrue(self.wait_disconnected(2))
+
+    def test_silent_client_is_dropped_after_its_keepalive_and_the_next_is_served(self):
+        c = self.raw_connect(keepalive=1)
+        self.subscribe(c)
+        self.assertTrue(self.lines[-1]["connected"])
+        self.assertTrue(self.wait_disconnected(3), "1.5 x 1 s keepalive without a ping means dead")
+        c.close()
+        c2 = self.raw_connect()
+        self.subscribe(c2)
+        self.assertTrue(self.lines[-1]["connected"], "the reconnecting Teams is served")
+        c2.close()
+
+    def test_poll_resumes_on_the_next_connection(self):
+        c = self.raw_connect(); self.subscribe(c); c.close()
+        self.assertTrue(self.wait_disconnected(2))
+        self.broker.request_calendar()  # the ticker fires while nobody is connected: no-op, no crash
+        c2 = self.raw_connect(); self.subscribe(c2)
+        self.broker.request_calendar()
+        self.assertEqual(self.b.read_packet(c2)[0], 3, "the poll reaches the new client")
+        c2.close()
 
 
 if __name__ == "__main__":

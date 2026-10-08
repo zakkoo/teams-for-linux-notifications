@@ -13,24 +13,14 @@ def load_script(name):
 
 
 class FakeTeams:
-    """One MQTT client talking to a bridge.Client served on a background thread."""
+    """One MQTT client talking to a Broker that serves it on a background thread, exactly like the accept loop does."""
 
-    def __init__(self, bridge, v5=False):
-        self.b, self.v5 = bridge, v5
+    def __init__(self, bridge, broker, v5=False):
+        self.b, self.broker, self.v5 = bridge, broker, v5
         self.sock, server_side = socket.socketpair()
         self.sock.settimeout(3)
-        self.client = bridge.Client(server_side)
-        bridge.client = self.client
-        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self.thread = threading.Thread(target=broker.serve_client, args=(server_side,), daemon=True)
         self.thread.start()
-
-    def _serve(self):
-        try:
-            self.client.serve()
-        except OSError:
-            pass
-        finally:
-            self.client.sock.close()
 
     @property
     def props(self):
@@ -43,8 +33,8 @@ class FakeTeams:
         tp, fl, body = self.b.read_packet(self.sock)
         return tp, body
 
-    def connect(self, client_id="teams-for-linux", flags=0x02, extra=b""):
-        self.send(0x10, self.b.mkstr("MQTT") + bytes([5 if self.v5 else 4, flags]) + b"\x00\x3c" + self.props + self.b.mkstr(client_id) + extra)
+    def connect(self, client_id="teams-for-linux", flags=0x02, extra=b"", keepalive=60):
+        self.send(0x10, self.b.mkstr("MQTT") + bytes([5 if self.v5 else 4, flags]) + keepalive.to_bytes(2, "big") + self.props + self.b.mkstr(client_id) + extra)
         return self.read()
 
     def subscribe(self, *topics, pid=1):

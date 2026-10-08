@@ -98,6 +98,13 @@ class TeamsConfig(unittest.TestCase):
         self.cli("connect", env={**os.environ, "HOME": home})
         self.assertTrue(os.path.exists(os.path.join(home, ".config/teams-for-linux/config.json")))
 
+    def test_non_object_root_is_replaced_with_backup(self):
+        open(self.cfg, "w").write("[]")
+        self.assertEqual(self.cli("status", "--config", self.cfg), "disconnected")
+        backup = self.cli("connect", "--config", self.cfg)
+        self.assertTrue(os.path.exists(backup), "the odd original is kept")
+        self.assertTrue(self.read()["mqtt"]["enabled"])
+
     def test_invalid_json_fails_loudly(self):
         open(self.cfg, "w").write("{oops")
         r = subprocess.run([sys.executable, HELPER, "connect", "--config", self.cfg], capture_output=True, text=True)

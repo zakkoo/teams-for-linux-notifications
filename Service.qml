@@ -37,14 +37,42 @@ Item {
   property bool teamsWired: true   // teams-config.py status
 
   property real nowMs: Date.now()
+  // Per event id: skipped for good (middle-click, dismiss once started, left its call).
   property var dismissed: ({})
   // Per event id: show the reminder card no earlier than this (ms). A snooze
-  // deadline, or Infinity once the user joined from the card.
+  // deadline, the start after an early dismiss, or Infinity once joined.
   property var remindAt: ({})
+  // The meeting the current call belongs to. Fixed when the call starts (or
+  // the first time the calendar matches during it) and never re-pointed, so
+  // an overrunning call cannot mark the *next* meeting handled.
+  property var inCallEvent: null
 
-  readonly property var meetingState: Model.labelState(events, nowMs, inCall, meetingStarted, pulseAt, horizonMinutes, dismissed)
+  // A meeting only enters the bar inside the horizon, so a lead time beyond
+  // it could never fire; cap it there so the setting stays honest.
+  readonly property int effectiveLead: Math.min(leadMinutes, horizonMinutes)
+
+  // Everything Model needs, gathered once; every Model call reads this.
+  readonly property var ctx: ({
+    events: events, nowMs: nowMs, inCall: inCall,
+    inCallEventId: inCall && inCallEvent ? inCallEvent.id : "",
+    meetingStarted: meetingStarted, pulseAtMs: pulseAt,
+    horizonMin: horizonMinutes, leadMin: effectiveLead,
+    dismissed: dismissed, remindAt: remindAt
+  })
+
+  readonly property var meetingState: Model.labelState(ctx)
   readonly property bool urgent: meetingState.kind === "now" || meetingState.kind === "started"
   readonly property bool setupMode: !connected && !teamsWired
+  // Reminder cards exist exactly while due: in-call, ended and dismissed
+  // meetings drop out on their own, and the 15 s tick re-evaluates snooze
+  // deadlines without a timer. One card per due meeting, capped in the model.
+  readonly property var reminders: toast ? Model.dueReminders(ctx) : []
+
+  readonly property string statusText: bridgeError ? bridgeError
+    : !bridgeAlive ? "Starting bridge…"
+    : !connected ? (teamsWired ? "Waiting for Teams for Linux (is it running?)" : "Teams for Linux is not connected yet")
+    : events.length === 0 ? "Connected · no calendar received yet"
+    : "Connected"
 
   readonly property string scriptDir: {
     var url = Qt.resolvedUrl("scripts/").toString()
@@ -64,26 +92,32 @@ Item {
     nowMs = Date.now()
   }
 
-  // Reminder cards exist exactly while due: in-call, ended and dismissed
-  // meetings drop out on their own, and the 15 s tick re-evaluates snooze
-  // deadlines without a timer. One card per due meeting, capped in the model.
-  // A meeting only enters the bar inside the horizon, so a lead time beyond
-  // it could never fire; cap it there so the setting stays honest.
-  readonly property int effectiveLead: Math.min(leadMinutes, horizonMinutes)
-  readonly property var reminders: toast
-    ? Model.dueReminders(events, nowMs, inCall && inCallEvent ? inCallEvent.id : "", meetingStarted, pulseAt, horizonMinutes, dismissed, effectiveLead, remindAt) : []
+  // dismissed and remindAt are only ever replaced with a copy: QML emits no
+  // change for a var property handed the same object back, and the cards and
+  // bar must react at once. These two helpers are the only writers.
+  function mapWith(map, id, value) { var m = Object.assign({}, map); m[id] = value; return m }
+  function mapWithout(map, id) { var m = Object.assign({}, map); delete m[id]; return m }
+
+  function holdReminder(event, untilMs) {
+    if (!event) return
+    remindAt = mapWith(remindAt, event.id, untilMs)
+  }
+  function dismissEvent(event) {
+    if (!event) return
+    dismissed = mapWith(dismissed, event.id, true)
+  }
+  function restore(event) {
+    if (!event) return
+    dismissed = mapWithout(dismissed, event.id)
+    remindAt = mapWithout(remindAt, event.id)
+  }
+  function dismiss() { dismissEvent(meetingState.event) }   // bar middle-click: skip the shown meeting
 
   // Changing the reminder rule starts over: snoozes and "joined" marks made
   // under the old rule no longer mean anything.
   onToastChanged: remindAt = ({})
   onLeadMinutesChanged: remindAt = ({})
 
-  // Both maps are replaced with a copy: QML emits no change for a var property
-  // that is handed the same object back, and the cards must react at once.
-  function holdReminder(event, untilMs) {
-    if (!event) return
-    var r = Object.assign({}, remindAt); r[event.id] = untilMs; remindAt = r
-  }
   // state: one entry of `reminders` ({event, kind, minutes}).
   function snooze(state) {
     var m = Model.snoozeMinutes(state)
@@ -102,14 +136,14 @@ Item {
     else holdReminder(state.event, until)
   }
 
-  // The meeting you were in: once you leave the call it is handled, so the
-  // bar must not turn urgent again and no card may return for it.
-  property var inCallEvent: null
+  // Once you leave the call its meeting is handled: the bar must not turn
+  // urgent again and no card may return for it.
   onInCallChanged: {
     if (inCall) inCallEvent = meetingState.event
     else { dismissEvent(inCallEvent); inCallEvent = null }
   }
-  onMeetingStateChanged: if (inCall && meetingState.event) inCallEvent = meetingState.event
+  // The calendar may arrive after the call started; adopt the match once, never re-point.
+  onMeetingStateChanged: if (inCall && inCallEvent === null && meetingState.event) inCallEvent = meetingState.event
 
   Loader {
     active: root.reminders.length > 0
@@ -123,29 +157,12 @@ Item {
     Quickshell.execDetached(["sh", "-c", 'command -v teams-for-linux >/dev/null 2>&1 && exec teams-for-linux "$1" || exec xdg-open "$1"', "_", url])
   }
 
-  function dismissEvent(event) {
-    if (!event) return
-    var d = Object.assign({}, dismissed); d[event.id] = true; dismissed = d
-  }
-  function dismiss() { dismissEvent(meetingState.event) }   // bar middle-click: skip the shown meeting
-  function restore(event) {
-    if (!event) return
-    var d = Object.assign({}, dismissed); delete d[event.id]; dismissed = d
-    var r = Object.assign({}, remindAt); delete r[event.id]; remindAt = r
-  }
-
   function refreshWired() { wiredProc.running = true }
-
-  function statusText() {
-    if (bridgeError) return bridgeError
-    if (!bridgeAlive) return "Starting bridge…"
-    if (!connected) return teamsWired ? "Waiting for Teams for Linux (is it running?)" : "Teams for Linux is not connected yet"
-    if (events.length === 0) return "Connected · no calendar received yet"
-    return "Connected"
-  }
 
   Process {
     id: bridge
+    // Set before a deliberate stop (settings change) so the exit is not reported as an error.
+    property bool restarting: false
     command: ["/usr/bin/python3", root.scriptDir + "bridge.py",
               "--port", String(root.mqttPort), "--prefix", root.mqttPrefix, "--poll-minutes", String(root.pollMinutes)]
     running: true
@@ -154,11 +171,13 @@ Item {
     onExited: function(code) {
       root.bridgeAlive = false
       root.connected = false
-      if (!root.bridgeError) root.bridgeError = "bridge exited (" + code + ")"
+      if (!restarting && !root.bridgeError) root.bridgeError = "bridge exited (" + code + ")"
+      restarting = false
       restartTimer.restart()
     }
     onCommandChanged: {
       if (!running) return
+      restarting = true
       running = false
       restartTimer.restart()
     }

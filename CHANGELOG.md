@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.5
+
+Five fixes. A "meeting started" signal from Teams that matched no calendar
+entry used to hold back every reminder card for ten minutes; now each meeting
+is judged on its own. Staying in a call past the meeting's end no longer makes
+the widget treat the next meeting as handled when you leave. The bridge's
+calendar polling could die silently if Teams disconnected at the wrong moment,
+a malformed packet could take the whole bridge down, and a Teams that died
+without closing its connection left the widget saying "connected" forever and
+blocked the reconnect; all three are fixed, and a settings change no longer
+flashes a "bridge exited" error. Under the hood the meeting logic, the service
+bookkeeping and the bridge were restructured into clearer, separately testable
+pieces with no other change in behaviour.
+
 ## 0.3.4
 
 The popup now has two sections: Today with the ongoing and upcoming meetings,

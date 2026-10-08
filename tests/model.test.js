@@ -1,17 +1,51 @@
-// node --test tests/   — the bar label state machine, run against the spec scenarios.
+// node --test tests/   — the meeting logic (bar label, reminders, popup sections) against the spec scenarios.
 const { test } = require("node:test")
 const assert = require("node:assert/strict")
 const fs = require("fs"), path = require("path")
 
 const src = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(".pragma library", "")
-const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.dueReminders=dueReminders;exports.dismissUntil=dismissUntil;exports.fmtTime=fmtTime;")(M)
+const M = {}
+new Function("exports", src + "\n" + ["normalize", "pulseAdoptee", "eventState", "labelState", "toastDue", "dismissUntil", "snoozeMinutes", "dueReminders", "splitDay", "fmtTime"]
+  .map((n) => `exports.${n}=${n};`).join(""))(M)
 
 const now = Date.UTC(2026, 9, 7, 9, 0, 0)
 const ev = (id, startMin, lenMin = 30, extra = {}) => ({
-  id, subject: id, joinUrl: "", location: "", ...extra,
+  id, subject: id, joinUrl: "", location: "",
   start: new Date(now + startMin * 60000).toISOString(), end: new Date(now + (startMin + lenMin) * 60000).toISOString(),
+  ...extra,
 })
-const S = (events, o = {}) => M.labelState(events, now, o.inCall || false, o.started || false, o.pulseAt || 0, o.horizon || 15, o.dismissed || {})
+// One context for every entry point; a scenario passes only what it is about.
+const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
+const ctx = (events, o = {}) => ({ events, nowMs: now, horizonMin: 15, leadMin: 15, dismissed: {}, remindAt: {}, inCall: false, inCallEventId: "", meetingStarted: false, pulseAtMs: 0, hidePast: false, ...defined(o) })
+const S = (events, o = {}) => M.labelState(ctx(events, { inCall: o.inCall, meetingStarted: o.started, pulseAtMs: o.pulseAt, horizonMin: o.horizon, dismissed: o.dismissed }))
+
+// --- normalize / eventState
+
+test("normalize parses once, drops unparsable starts, sorts by start", () => {
+  const list = M.normalize([ev("B", 10), { id: "bad", start: "nope", end: "nope" }, ev("A", 5, 30, { end: "garbage" })])
+  assert.deepEqual(list.map((x) => x.event.id), ["A", "B"])
+  assert.equal(list[0].endMs, list[0].startMs, "unparsable end counts as ending at start")
+  assert.deepEqual(M.normalize(null), [])
+})
+
+test("eventState judges one meeting alone", () => {
+  const c = { nowMs: now, horizonMin: 15, adoptedId: null }
+  const st = (e) => M.eventState(M.normalize([e])[0], c)
+  assert.deepEqual(st(ev("running", -1)), { kind: "now", minutes: 0 })
+  assert.deepEqual(st(ev("soon", 12)), { kind: "upcoming", minutes: 12 })
+  assert.equal(st(ev("far", 16)).kind, "none")
+  assert.equal(st(ev("ended", -60)).kind, "none")
+  assert.equal(M.eventState(M.normalize([ev("adopted", 3)])[0], { ...c, adoptedId: "adopted" }).kind, "now")
+})
+
+test("a pulse adopts only the earliest unfinished event within five minutes", () => {
+  const list = M.normalize([ev("later", 4), ev("first", 2), ev("far", 8), ev("ended", -40, 30)])
+  assert.equal(M.pulseAdoptee(list, { nowMs: now, meetingStarted: true }), "first")
+  assert.equal(M.pulseAdoptee(list, { nowMs: now, meetingStarted: false }), null)
+  assert.equal(M.pulseAdoptee(M.normalize([ev("far", 8)]), { nowMs: now, meetingStarted: true }), null)
+})
+
+// --- labelState
 
 test("empty and malformed input hide the widget", () => {
   assert.equal(S([]).kind, "none")
@@ -26,8 +60,8 @@ test("upcoming within horizon shows title and countdown", () => {
 })
 
 test("countdown rounds up so 'in 1m' never shows 0", () => {
-  assert.equal(M.labelState([ev("X", 0.5)], now, false, false, 0, 15, {}).suffix, "in 1m")
-  assert.equal(M.labelState([ev("X", 11.1)], now, false, false, 0, 15, {}).suffix, "in 12m")
+  assert.equal(S([ev("X", 0.5)]).suffix, "in 1m")
+  assert.equal(S([ev("X", 11.1)]).suffix, "in 12m")
 })
 
 test("horizon boundary is inclusive", () => {
@@ -43,7 +77,7 @@ test("earliest upcoming wins regardless of input order", () => {
 
 test("started and not joined is sticky 'now' in urgent kind", () => {
   const s = S([ev("Standup", -1)])
-  assert.deepEqual([s.kind, s.title, s.suffix], ["now", "Standup", "now"])
+  assert.deepEqual([s.kind, s.title, s.suffix, s.text], ["now", "Standup", "now", "Standup · now"])
   assert.equal(S([ev("Standup", -29)]).kind, "now", "still running at the last minute")
   assert.equal(S([ev("Old", -60)]).kind, "none", "ended")
 })
@@ -58,7 +92,7 @@ test("overlapping running meetings: the earlier started one is shown", () => {
 
 test("in a call keeps the widget, non-urgent", () => {
   const s = S([ev("Standup", -1)], { inCall: true })
-  assert.deepEqual([s.kind, s.title, s.suffix], ["incall", "Standup", "in call"])
+  assert.deepEqual([s.kind, s.title, s.suffix, s.text], ["incall", "Standup", "in call", "Standup · in call"])
   assert.equal(S([ev("Soon", 3)], { inCall: true }).title, "Soon", "joined a few minutes early still matches")
   assert.equal(S([ev("Far", 40)], { inCall: true }).text, "In a call", "no matching meeting")
   assert.equal(S([], { inCall: true }).text, "In a call")
@@ -82,6 +116,8 @@ test("dismissed meetings are skipped entirely", () => {
   assert.equal(S([ev("Standup", -1)], { dismissed: { Standup: true } }).kind, "none")
   assert.equal(S([ev("A", -1), ev("B", 5)], { dismissed: { A: true } }).event.id, "B")
 })
+
+// --- reminders
 
 test("toast is due at lead time, at start, but not long after", () => {
   assert.equal(M.toastDue(S([ev("X", 2)]), now, 2), true)
@@ -117,16 +153,8 @@ test("snooze halves the countdown, floors at 1, and is not offered at the end or
   assert.ok(snooze(15) * 60000 < 15 * 60000, "a snooze always ends before the start")
 })
 
-test("popup lists upcoming nearest-first, then finished most-recent-first, or hides finished", () => {
-  const day = [ev("later", 120), ev("running", -10), ev("soon", 5), ev("old", -180), ev("recent", -60), { id: "bad", subject: "bad", start: "nope", end: "nope" }]
-  const ids = (list) => list.map((e) => e.id)
-  assert.deepEqual(ids(M.popupOrder(day, now, false)), ["running", "soon", "later", "recent", "old"])
-  assert.deepEqual(ids(M.popupOrder(day, now, true)), ["running", "soon", "later"])
-  assert.deepEqual(M.popupOrder(null, now, false), [])
-})
-
 test("due reminders: one card per due meeting, soonest first, capped at three", () => {
-  const due = (events, o = {}) => M.dueReminders(events, now, o.inCallId || "", false, 0, 60, o.dismissed || {}, o.lead ?? 15, o.remindAt || {})
+  const due = (events, o = {}) => M.dueReminders(ctx(events, { horizonMin: 60, leadMin: o.lead ?? 15, dismissed: o.dismissed, remindAt: o.remindAt, inCallEventId: o.inCallId }))
   const ids = (list) => list.map((r) => r.event.id)
   const day = [ev("later", 40), ev("running", -3), ev("soon", 2), ev("next", 10), ev("old", -60, 30)]
   assert.deepEqual(ids(due(day, { lead: 60 })), ["running", "soon", "next"], "capped at three, soonest first")
@@ -136,6 +164,41 @@ test("due reminders: one card per due meeting, soonest first, capped at three", 
   assert.deepEqual(ids(due(day, { lead: 60, remindAt: { soon: now + 60000 } })), ["running", "next", "later"], "a snoozed meeting steps aside")
   assert.deepEqual(ids(due(day, { lead: 60, inCallId: "running" })), ["soon", "next", "later"], "in a call: only that meeting is exempt, a clash still reminds")
   assert.deepEqual(due([]), [])
+})
+
+test("an unmatched meeting-started pulse holds no card back", () => {
+  const planning = [ev("Planning", 8)]
+  const c = { horizonMin: 15, leadMin: 10, meetingStarted: true, pulseAtMs: now }
+  assert.equal(M.labelState(ctx(planning, c)).text, "Meeting started", "the bar shows the generic label")
+  const due = M.dueReminders(ctx(planning, c))
+  assert.deepEqual(due.map((r) => [r.event.id, r.kind, r.minutes]), [["Planning", "upcoming", 8]], "the card still comes")
+  assert.equal(M.snoozeMinutes(due[0]), 4, "with its Remind-me button")
+})
+
+test("a pulse turns only the earliest nearby meeting into 'now'", () => {
+  const two = [ev("Second", 4), ev("First", 2)]
+  const due = M.dueReminders(ctx(two, { meetingStarted: true, pulseAtMs: now }))
+  assert.deepEqual(due.map((r) => [r.event.id, r.kind]), [["First", "now"], ["Second", "upcoming"]])
+  assert.equal(M.snoozeMinutes(due[1]), 2, "the later one keeps its countdown and Remind-me")
+})
+
+// --- popup
+
+test("popup lists upcoming nearest-first, then finished most-recent-first, or hides finished", () => {
+  const day = [ev("later", 120), ev("running", -10), ev("soon", 5), ev("old", -180), ev("recent", -60), { id: "bad", subject: "bad", start: "nope", end: "nope" }]
+  const ids = (list) => list.map((e) => e.id)
+  const shown = M.splitDay(ctx(day))
+  assert.deepEqual([ids(shown.today), ids(shown.finished), shown.finishedCount], [["running", "soon", "later"], ["recent", "old"], 2])
+  const hidden = M.splitDay(ctx(day, { hidePast: true }))
+  assert.deepEqual([ids(hidden.today), hidden.finished, hidden.finishedCount], [["running", "soon", "later"], [], 2], "count survives hiding, for the toggle label")
+  assert.deepEqual(M.splitDay(ctx(null)), { today: [], finished: [], finishedCount: 0 })
+})
+
+test("two sections: the spec's 11:00 day", () => {
+  const at = (h, m) => (h * 60 + m) - 11 * 60   // minutes relative to 11:00
+  const day = [ev("09:00", at(9, 0), 30), ev("10:00", at(10, 0), 30), ev("10:50", at(10, 50), 30), ev("11:30", at(11, 30), 30), ev("14:00", at(14, 0), 30)]
+  const s = M.splitDay(ctx(day))
+  assert.deepEqual([s.today.map((e) => e.id), s.finished.map((e) => e.id)], [["10:50", "11:30", "14:00"], ["10:00", "09:00"]])
 })
 
 test("fmtTime renders local HH:MM and tolerates garbage", () => {

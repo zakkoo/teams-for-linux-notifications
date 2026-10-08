@@ -106,6 +106,16 @@ node --test tests/model.test.js            # bar label state machine against the
 omarchy plugin validate .                  # the shell's own manifest check (needs Omarchy)
 ```
 
+`Model.js` is pure logic in three layers: `normalize` parses and sorts the
+events once, `eventState` judges one meeting on its own, and `labelState`,
+`dueReminders` and `splitDay` compose the bar label, the reminder cards and the
+popup sections from those. Every entry point takes one context object
+(`{events, nowMs, inCall, inCallEventId, meetingStarted, pulseAtMs, horizonMin,
+leadMin, dismissed, remindAt, hidePast}`), so a test scenario is a literal.
+`Service.qml` builds that object once and owns the bookkeeping (dismissals,
+snoozes, the meeting a call belongs to); `bridge.py` keeps its state in one
+`Broker` object that the tests construct fresh per scenario.
+
 No test dependencies: Python's `unittest` and Node's built-in test runner.
 GitHub Actions runs both on every push, plus `qmllint` for QML syntax. The
 QML behaviour itself has no headless runner in the shell, so the structure

@@ -167,7 +167,7 @@ BarWidget {
     hoverEnabled: true
     onEntered: if (root.bar) root.bar.showTooltip(root, root.setupMode ? "Click to connect Teams for Linux"
                                                         : root.meetingState.event ? Model.fmtTime(root.meetingState.event.start) + "  " + root.meetingState.event.subject + "  ·  " + root.suffix
-                                                        : root.meetingState.text || (root.svc ? root.svc.statusText() : ""))
+                                                        : root.meetingState.text || (root.svc ? root.svc.statusText : ""))
     onExited: if (root.bar) root.bar.hideTooltip(root)
     onClicked: function(mouse) {
       if (mouse.button === Qt.MiddleButton) { if (root.svc) root.svc.dismiss() }

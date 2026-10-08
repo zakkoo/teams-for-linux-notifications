@@ -32,10 +32,11 @@ Panel {
   function supportedList() { return supportedLanguages.map(function (l) { return languageNames[l] }).join(", ") }
   readonly property bool hidePast: setting("hidePast", false) === true
   readonly property real nowMs: w ? w.nowMs : Date.now()
-  // Latest first, so the rest of the day reads top-down and finished meetings sink to the bottom.
-  readonly property var rows: Model.popupOrder(w ? w.events : [], nowMs, true)
-  readonly property var pastRows: Model.popupOrder(w ? w.events : [], nowMs, false).filter(function (e) { return Date.parse(e.end) <= nowMs })
-  readonly property int pastCount: pastRows.length
+  // Today nearest-first, finished most recent first (empty while hidden, count kept for the toggle).
+  readonly property var day: Model.splitDay({ events: w ? w.events : [], nowMs: nowMs, hidePast: hidePast })
+  readonly property var rows: day.today
+  readonly property var pastRows: day.finished
+  readonly property int pastCount: day.finishedCount
   readonly property int rowHeight: Style.space(34)
   readonly property int maxRows: 5
 
@@ -354,7 +355,7 @@ Panel {
 
         Text {
           width: parent.width
-          text: w ? w.statusText() : ""
+          text: w ? w.statusText : ""
           wrapMode: Text.Wrap
           color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
         }

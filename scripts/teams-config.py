@@ -36,9 +36,10 @@ def managed(port, prefix):
 def load(path):
     try:
         with open(path) as f:
-            return json.load(f)
+            cfg = json.load(f)
     except FileNotFoundError:
         return {}
+    return cfg if isinstance(cfg, dict) else {}  # a non-object root is replaced (the backup keeps it)
 
 
 def save(path, cfg):

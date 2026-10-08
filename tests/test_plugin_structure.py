@@ -99,9 +99,34 @@ class QmlContracts(unittest.TestCase):
         self.assertIn("function dismiss()", self.svc, "bar middle-click keeps its argument-less dismiss")
         self.assertIn("w.restore(", self.panel, "a skipped meeting must be restorable from the popup")
         # A var property handed the same object back emits no change; the card and bar must react at once.
+        # Every write to the two maps goes through the copying helpers, nothing mutates them in place.
+        self.assertRegex(self.svc, r"function mapWith\(map, id, value\) \{ var m = Object.assign\(\{\}, map\);")
+        self.assertRegex(self.svc, r"function mapWithout\(map, id\) \{ var m = Object.assign\(\{\}, map\);")
         for prop in ("remindAt", "dismissed"):
-            self.assertNotRegex(self.svc, rf"var \w+ = {prop};", f"{prop} must be replaced with a copy, not mutated in place")
-            self.assertIn(f"Object.assign({{}}, {prop})", self.svc)
+            writes = re.findall(rf"(?m)^\s*{prop} = (.*)$", self.svc)
+            self.assertTrue(writes, f"{prop} is never written")
+            for rhs in writes:
+                self.assertRegex(rhs, rf"^(mapWith|mapWithout)\({prop}, |\(\{{\}}\)$", f"{prop} written without a copy: {rhs}")
+            self.assertNotRegex(self.svc, rf"{prop}\[[^\]]+\] = ", f"{prop} mutated in place")
+
+    def test_in_call_meeting_is_locked_for_the_call(self):
+        # Fixed when the call starts; later matches only fill a null, never re-point it (an overrunning
+        # call must not mark the next meeting handled when the user leaves).
+        writes = re.findall(r"inCallEvent = (\S+)", self.svc)
+        self.assertIn("meetingState.event", writes); self.assertIn("null", writes)
+        for m in re.finditer(r"(?m)^(.*)inCallEvent = meetingState\.event", self.svc):
+            line = m.group(0)
+            self.assertTrue("onInCallChanged" in line or "if (inCall)" in line or "inCallEvent === null" in line, f"unguarded re-point: {line.strip()}")
+
+    def test_deliberate_bridge_restart_is_not_an_error(self):
+        # A settings change restarts the bridge; onExited must not report that as "bridge exited".
+        self.assertRegex(self.svc, r"onCommandChanged: \{[^}]*restarting = true")
+        self.assertRegex(self.svc, r"if \(!restarting && !root\.bridgeError\) root\.bridgeError = ")
+
+    def test_status_text_is_a_property(self):
+        self.assertRegex(self.svc, r"readonly property string statusText:")
+        for src in (self.bw, self.panel):
+            self.assertNotIn("statusText()", src)
 
     def test_referenced_files_exist(self):
         for src in (self.bw, self.panel, self.svc, read("ReminderCard.qml")):
