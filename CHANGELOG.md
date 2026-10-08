@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+The optional reminder is now a card the widget draws itself, with Join,
+Remind me and Dismiss buttons. Remind me halves the time left on every press
+(15 min → 7 → 4 → 2 → 1) and the card comes back accordingly; clicking the
+card body does nothing. It replaces the desktop notification, which the
+Omarchy shell renders without buttons. The reminder setting keeps its key, so
+nothing needs reconfiguring. The popup now lists what is still to come first,
+nearest at the top, with finished meetings underneath, most recent first.
+
 ## 0.1.4
 
 Meeting subjects and locations in the popup are rendered as plain text. Qt's

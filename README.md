@@ -11,6 +11,10 @@ widget puts your next meeting straight into the Omarchy bar.
   every setting lives in the widget's own popup.
 - **Click to join.** Meetings open in Teams for Linux, not in a browser tab.
   Meetings in a physical room show the room instead.
+- **Snoozable reminder.** Optionally a card pops up before the meeting with
+  **Join**, **Remind me in N min** and **Dismiss**. Each snooze halves the
+  time left (15 min → remind in 7 → remind in 4 → …). Clicking the card
+  itself does nothing; only the buttons act.
 
 ![Preview](preview.png)
 
@@ -50,8 +54,8 @@ meeting directly. Middle click dismisses a meeting you are skipping.
 
 Everything is in the popup under **Settings & connection**: how far ahead the
 next meeting appears (15 minutes by default), how often the calendar is
-checked, whether long titles scroll through the bar, an optional pop-up
-reminder and its lead time, and, under *Advanced*, the local port and message
+checked, whether long titles scroll through the bar, an optional reminder
+card and its lead time, and, under *Advanced*, the local port and message
 prefix used to talk to Teams for Linux. The meeting list has its own toggle to
 hide finished meetings. The same values are also editable in the shell's
 widget settings form.

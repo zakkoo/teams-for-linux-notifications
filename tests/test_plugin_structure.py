@@ -86,12 +86,19 @@ class QmlContracts(unittest.TestCase):
         self.assertIn('"status"', self.svc)
         self.assertRegex(self.panel, r'"connect"|"disconnect"')
 
-    def test_toast_never_mentions_subject(self):
-        toast = self.svc[self.svc.index("onMeetingStateChanged"):self.svc.index("function join")]
-        self.assertNotRegex(toast, r"\.subject|SUBJECT", "meeting subject must not reach the notification process")
+    def test_reminder_is_drawn_in_process(self):
+        # The shell's notification daemon draws no buttons and its argv is world-readable; the card is ours.
+        self.assertNotIn("omarchy-notification-send", self.svc)
+        self.assertNotIn("notify-send", self.svc)
+        self.assertIn('Qt.resolvedUrl("ReminderCard.qml")', self.svc)
+        card = read("ReminderCard.qml")
+        self.assertNotIn("MouseArea", re.sub(r"//[^\n]*", "", card), "the card body must be inert; only the buttons act")
+        for fn in ("joinFromCard", "snooze", "dismiss"):
+            self.assertIn(f"svc.{fn}()", card)
+            self.assertIn(f"function {fn}()", self.svc)
 
     def test_referenced_files_exist(self):
-        for src in (self.bw, self.panel, self.svc):
+        for src in (self.bw, self.panel, self.svc, read("ReminderCard.qml")):
             for ref in re.findall(r'(?:Qt\.resolvedUrl|import)\s*\(?\s*"([^"]+\.(?:qml|js))"', src):
                 self.assertTrue(os.path.isfile(os.path.join(ROOT, ref)), ref)
         for script in ("bridge.py", "teams-config.py"):
@@ -122,7 +129,7 @@ class QmlContracts(unittest.TestCase):
             self.assertIn("textFormat: Text.PlainText", block, item)
 
     def test_braces_balanced(self):
-        for name in ("BarWidget.qml", "Panel.qml", "Service.qml", "ServiceRegistry.qml", "Model.js"):
+        for name in ("BarWidget.qml", "Panel.qml", "Service.qml", "ServiceRegistry.qml", "ReminderCard.qml", "Model.js"):
             src = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*', "", read(name))
             self.assertEqual(src.count("{"), src.count("}"), name)
             self.assertEqual(src.count("("), src.count(")"), name)

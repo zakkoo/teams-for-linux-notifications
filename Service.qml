@@ -38,7 +38,9 @@ Item {
 
   property real nowMs: Date.now()
   property var dismissed: ({})
-  property var toasted: ({})
+  // Per event id: show the reminder card no earlier than this (ms). A snooze
+  // deadline, or Infinity once the user joined from the card.
+  property var remindAt: ({})
 
   readonly property var meetingState: Model.labelState(events, nowMs, inCall, meetingStarted, pulseAt, horizonMinutes, dismissed)
   readonly property bool urgent: meetingState.kind === "now" || meetingState.kind === "started"
@@ -62,17 +64,29 @@ Item {
     nowMs = Date.now()
   }
 
-  onMeetingStateChanged: {
-    if (!toast || !meetingState.event || toasted[meetingState.event.id]) return
-    if (!Model.toastDue(meetingState, nowMs, leadMinutes)) return
-    var t = toasted; t[meetingState.event.id] = true; toasted = t
-    // The subject never reaches the toast: omarchy-notification-send ends in a
-    // busctl call, so any text handed to it is world-readable in /proc/<pid>/cmdline.
-    // The bar and popup already show which meeting it is.
-    var cmd = ["omarchy-notification-send", "-u", "critical", "--app-name", "Teams Meetings",
-      meetingState.kind === "now" ? "Teams meeting now" : "Teams meeting in " + meetingState.minutes + " min"]
-    if (meetingState.event.joinUrl) cmd.push("Click to join", "--exec", "teams-for-linux", meetingState.event.joinUrl)
-    Quickshell.execDetached(cmd)
+  // The reminder card exists exactly while it is due: in-call, ended and
+  // dismissed meetings already drop out of meetingState, and the 15 s tick
+  // re-evaluates a snooze deadline without a timer of its own.
+  readonly property bool reminderDue: toast && !inCall && !!meetingState.event
+    && Model.toastDue(meetingState, nowMs, leadMinutes, remindAt[meetingState.event.id])
+
+  function holdReminder(untilMs) {
+    if (!meetingState.event) return
+    var r = remindAt; r[meetingState.event.id] = untilMs; remindAt = r
+  }
+  function snooze() {
+    var m = Model.snoozeMinutes(meetingState)
+    if (m > 0) holdReminder(Date.now() + m * 60000)
+  }
+  function joinFromCard() {
+    if (!meetingState.event) return
+    join(meetingState.event.joinUrl)
+    holdReminder(Infinity)
+  }
+
+  Loader {
+    active: root.reminderDue
+    source: Qt.resolvedUrl("ReminderCard.qml")
   }
 
   // Teams for Linux forwards argv to its running instance and opens meetup-join

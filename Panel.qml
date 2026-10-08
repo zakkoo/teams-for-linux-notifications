@@ -33,12 +33,7 @@ Panel {
   readonly property bool hidePast: setting("hidePast", false) === true
   readonly property real nowMs: w ? w.nowMs : Date.now()
   // Latest first, so the rest of the day reads top-down and finished meetings sink to the bottom.
-  readonly property var rows: {
-    var list = (w ? w.events : []).slice()
-    if (hidePast) list = list.filter(function (e) { return Date.parse(e.end) > nowMs })
-    list.sort(function (a, b) { return Date.parse(b.start) - Date.parse(a.start) })
-    return list
-  }
+  readonly property var rows: Model.popupOrder(w ? w.events : [], nowMs, hidePast)
   readonly property int pastCount: (w ? w.events : []).filter(function (e) { return Date.parse(e.end) <= nowMs }).length
   readonly property int rowHeight: Style.space(34)
   readonly property int maxRows: 5
@@ -287,8 +282,8 @@ Panel {
         }
         Toggle {
           width: parent.width
-          label: "Pop-up reminder as well"
-          description: "Besides the bar, show a normal desktop notification once per meeting. Off keeps everything in the bar."
+          label: "Reminder card as well"
+          description: "Besides the bar, show a card with Join, Remind me and Dismiss when a meeting is due. Clicking the card itself does nothing. Off keeps everything in the bar."
           checked: root.setting("toast", false) === true
           foreground: root.fg; fontFamily: root.fontFamily
           titleSize: Style.font.body
@@ -299,7 +294,7 @@ Panel {
           label: "Remind me this many minutes before the start"
           from: 0; to: 60
           value: root.setting("leadMinutes", 2)
-          hint: "When the pop-up reminder appears. 0 means right when the meeting starts."
+          hint: "When the reminder card first appears. Remind me halves what is left each time. 0 means right when the meeting starts."
           onModified: function(v) { root.save("leadMinutes", v) }
         }
 

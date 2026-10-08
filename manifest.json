@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "io.github.zakkoo.teams-for-linux-notifications",
   "name": "Teams Meetings",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "author": "zakkoo",
   "license": "MIT",
   "homepage": "https://github.com/zakkoo/teams-for-linux-notifications",
-  "description": "Never miss a Teams meeting again. Your next meeting and its countdown live in the Omarchy bar, turn urgent when it starts and stay until you join. Reads the calendar Teams for Linux already has, no Azure setup or API keys. Click to join in Teams for Linux, optional desktop reminder.",
+  "description": "Never miss a Teams meeting again. Your next meeting and its countdown live in the Omarchy bar, turn urgent when it starts and stay until you join. Reads the calendar Teams for Linux already has, no Azure setup or API keys. Click to join in Teams for Linux, optional reminder card you can snooze.",
   "kinds": [
     "service",
     "bar-widget"
@@ -53,12 +53,12 @@
       {
         "key": "leadMinutes",
         "type": "integer",
-        "label": "Toast lead time",
+        "label": "Reminder lead time",
         "min": 0,
         "max": 60,
         "step": 1,
         "defaultValue": 2,
-        "description": "Minutes before the start at which the optional toast fires. 0 means at start."
+        "description": "Minutes before the start at which the optional reminder card appears. 0 means at start."
       },
       {
         "key": "scroll",
@@ -85,9 +85,9 @@
       {
         "key": "toast",
         "type": "boolean",
-        "label": "Also send a desktop notification",
+        "label": "Show a reminder card",
         "defaultValue": false,
-        "description": "Off keeps everything in the bar. On sends one notification per meeting."
+        "description": "Off keeps everything in the bar. On shows a card with Join, Remind me and Dismiss buttons when a meeting is due."
       },
       {
         "key": "pollMinutes",

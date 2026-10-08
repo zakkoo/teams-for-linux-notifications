@@ -4,7 +4,7 @@ const assert = require("node:assert/strict")
 const fs = require("fs"), path = require("path")
 
 const src = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(".pragma library", "")
-const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.fmtTime=fmtTime;")(M)
+const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.fmtTime=fmtTime;")(M)
 
 const now = Date.UTC(2026, 9, 7, 9, 0, 0)
 const ev = (id, startMin, lenMin = 30, extra = {}) => ({
@@ -90,6 +90,31 @@ test("toast is due at lead time, at start, but not long after", () => {
   assert.equal(M.toastDue(S([ev("X", -30, 60)]), now, 0), false, "shell restart mid-meeting stays silent")
   assert.equal(M.toastDue(S([]), now, 2), false)
   assert.equal(M.toastDue(S([], { started: true, pulseAt: now }), now, 2), false, "no event, nothing to announce")
+})
+
+test("a snooze holds the reminder back until its deadline", () => {
+  const up = S([ev("X", 8)])
+  assert.equal(M.toastDue(up, now, 15, now + 60000), false, "snoozed")
+  assert.equal(M.toastDue(up, now, 15, now), true, "deadline reached")
+  assert.equal(M.toastDue(up, now, 15, undefined), true, "never snoozed")
+  assert.equal(M.toastDue(S([ev("X", -1)]), now, 0, now - 1), true, "snooze elapsed, meeting started")
+  assert.equal(M.toastDue(S([ev("X", -1)]), now, 0, Infinity), false, "joined from the card: never again")
+})
+
+test("snooze halves the countdown, floors at 1, and is not offered at the end or once started", () => {
+  const snooze = (min) => M.snoozeMinutes(S([ev("X", min)], { horizon: 60 }))
+  assert.deepEqual([15, 8, 4, 2, 1].map(snooze), [7, 4, 2, 1, 0])
+  assert.equal(snooze(-1), 0, "now")
+  assert.equal(M.snoozeMinutes(S([])), 0)
+  assert.ok(snooze(15) * 60000 < 15 * 60000, "a snooze always ends before the start")
+})
+
+test("popup lists upcoming nearest-first, then finished most-recent-first, or hides finished", () => {
+  const day = [ev("later", 120), ev("running", -10), ev("soon", 5), ev("old", -180), ev("recent", -60), { id: "bad", subject: "bad", start: "nope", end: "nope" }]
+  const ids = (list) => list.map((e) => e.id)
+  assert.deepEqual(ids(M.popupOrder(day, now, false)), ["running", "soon", "later", "recent", "old"])
+  assert.deepEqual(ids(M.popupOrder(day, now, true)), ["running", "soon", "later"])
+  assert.deepEqual(M.popupOrder(null, now, false), [])
 })
 
 test("fmtTime renders local HH:MM and tolerates garbage", () => {

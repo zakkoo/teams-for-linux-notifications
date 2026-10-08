@@ -42,15 +42,38 @@ function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin
   return { kind: "none", event: null, title: "", suffix: "", text: "" }
 }
 
-// Toast is due when the state is "now" or the event starts within leadMin,
-// but never for a meeting already running for a while: a shell restart must
-// not re-announce the meeting you are sitting in.
-function toastDue(state, nowMs, leadMin) {
+// The reminder is due when the state is "now" or the event starts within
+// leadMin, but never for a meeting already running for a while: a shell
+// restart must not re-announce the meeting you are sitting in. remindAt (ms,
+// optional) holds the card back until then: a snooze deadline, or Infinity
+// once the user joined from the card.
+function toastDue(state, nowMs, leadMin, remindAt) {
   if (!state.event) return false
   var start = Date.parse(state.event.start)
   if (nowMs - start > NOW_MATCH_MS) return false
+  if (remindAt && nowMs < remindAt) return false
   if (state.kind === "now") return true
   return state.kind === "upcoming" && start - nowMs <= leadMin * 60000
+}
+
+// Half the shown countdown, so a snooze always ends before the meeting starts.
+// 0 means "do not offer": the meeting started or at most one minute is left.
+function snoozeMinutes(state) {
+  return state.kind === "upcoming" && state.minutes > 1 ? Math.floor(state.minutes / 2) : 0
+}
+
+// Popup order: what is still to come first, nearest at the top; finished
+// meetings after that, most recently ended first, or left out entirely.
+function popupOrder(events, nowMs, hidePast) {
+  var list = (events || []).filter(function (e) { return !isNaN(Date.parse(e.start)) })
+  var past = function (e) { return Date.parse(e.end) <= nowMs }
+  if (hidePast) list = list.filter(function (e) { return !past(e) })
+  list.sort(function (a, b) {
+    if (past(a) !== past(b)) return past(a) ? 1 : -1
+    var d = Date.parse(a.start) - Date.parse(b.start)
+    return past(a) ? -d : d
+  })
+  return list
 }
 
 function fmtTime(iso) {
