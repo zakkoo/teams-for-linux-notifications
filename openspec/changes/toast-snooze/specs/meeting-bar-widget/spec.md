@@ -34,7 +34,7 @@ The popup SHALL list today's meetings with the meetings still to come first, nea
 ## ADDED Requirements
 
 ### Requirement: Reminder card
-When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for the shown meeting when the time to its start is at most the lead time, or when it enters the "now" state. The card SHALL show the meeting subject and the time to start (or "now"). The card SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. The card SHALL stay until one of its buttons is pressed, the meeting is dismissed elsewhere, the user is in a call, or the meeting ends. Clicking the card anywhere outside its buttons SHALL do nothing. At most one card SHALL be shown at a time.
+When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for every meeting whose time to start is at most the lead time or that is in the "now" state, each meeting judged on its own. Cards SHALL stack soonest-start first, at most three at a time; a further due meeting SHALL get a card as soon as one of the three is gone. A card SHALL show the meeting subject and the time to start (or "now"). It SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. A card SHALL stay until one of its buttons is pressed, its meeting is dismissed elsewhere, the user is in a call, or its meeting ends. Clicking a card anywhere outside its buttons SHALL do nothing. The lead time SHALL be capped at the horizon, since a meeting outside the horizon is never shown.
 
 #### Scenario: Card appears at the lead time
 - **WHEN** the reminder is on, the lead time is 15 minutes, and "Standup" with a join link starts in 15 minutes
@@ -55,6 +55,14 @@ When the reminder setting is enabled, the widget SHALL show a reminder card as a
 #### Scenario: User joins from elsewhere
 - **WHEN** the card is showing and Teams reports an active call
 - **THEN** the card closes
+
+#### Scenario: Several meetings due
+- **WHEN** one meeting is running unjoined and two more start in 2 and 10 minutes, all within the lead time
+- **THEN** three cards are stacked in that order, each with its own buttons, and a fourth due meeting appears only after one of them is joined, snoozed or dismissed
+
+#### Scenario: Settings apply at once
+- **WHEN** the user changes the lead time or toggles the reminder
+- **THEN** cards appear or disappear immediately, and any snooze made under the old setting is forgotten
 
 #### Scenario: Reminder disabled (default)
 - **WHEN** the reminder is off and a meeting reaches the lead time or starts

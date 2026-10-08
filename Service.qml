@@ -64,14 +64,14 @@ Item {
     nowMs = Date.now()
   }
 
-  // The reminder card exists exactly while it is due: in-call, ended and
-  // dismissed meetings already drop out of meetingState, and the 15 s tick
-  // re-evaluates a snooze deadline without a timer of its own.
-  // A meeting only enters meetingState inside the horizon, so a lead time
-  // beyond it could never fire; cap it there so the setting stays honest.
+  // Reminder cards exist exactly while due: in-call, ended and dismissed
+  // meetings drop out on their own, and the 15 s tick re-evaluates snooze
+  // deadlines without a timer. One card per due meeting, capped in the model.
+  // A meeting only enters the bar inside the horizon, so a lead time beyond
+  // it could never fire; cap it there so the setting stays honest.
   readonly property int effectiveLead: Math.min(leadMinutes, horizonMinutes)
-  readonly property bool reminderDue: toast && !inCall && !!meetingState.event
-    && Model.toastDue(meetingState, nowMs, effectiveLead, remindAt[meetingState.event.id])
+  readonly property var reminders: toast
+    ? Model.dueReminders(events, nowMs, inCall, meetingStarted, pulseAt, horizonMinutes, dismissed, effectiveLead, remindAt) : []
 
   // Changing the reminder rule starts over: snoozes and "joined" marks made
   // under the old rule no longer mean anything.
@@ -79,23 +79,24 @@ Item {
   onLeadMinutesChanged: remindAt = ({})
 
   // Both maps are replaced with a copy: QML emits no change for a var property
-  // that is handed the same object back, and the card must react at once.
-  function holdReminder(untilMs) {
-    if (!meetingState.event) return
-    var r = Object.assign({}, remindAt); r[meetingState.event.id] = untilMs; remindAt = r
+  // that is handed the same object back, and the cards must react at once.
+  function holdReminder(event, untilMs) {
+    if (!event) return
+    var r = Object.assign({}, remindAt); r[event.id] = untilMs; remindAt = r
   }
-  function snooze() {
-    var m = Model.snoozeMinutes(meetingState)
-    if (m > 0) holdReminder(Date.now() + m * 60000)
+  // state: one entry of `reminders` ({event, kind, minutes}).
+  function snooze(state) {
+    var m = Model.snoozeMinutes(state)
+    if (m > 0) holdReminder(state.event, Date.now() + m * 60000)
   }
-  function joinFromCard() {
-    if (!meetingState.event) return
-    join(meetingState.event.joinUrl)
-    holdReminder(Infinity)
+  function joinFromCard(event) {
+    if (!event) return
+    join(event.joinUrl)
+    holdReminder(event, Infinity)
   }
 
   Loader {
-    active: root.reminderDue
+    active: root.reminders.length > 0
     source: Qt.resolvedUrl("ReminderCard.qml")
   }
 
@@ -106,10 +107,11 @@ Item {
     Quickshell.execDetached(["sh", "-c", 'command -v teams-for-linux >/dev/null 2>&1 && exec teams-for-linux "$1" || exec xdg-open "$1"', "_", url])
   }
 
-  function dismiss() {
-    if (!meetingState.event) return
-    var d = Object.assign({}, dismissed); d[meetingState.event.id] = true; dismissed = d
+  function dismissEvent(event) {
+    if (!event) return
+    var d = Object.assign({}, dismissed); d[event.id] = true; dismissed = d
   }
+  function dismiss() { dismissEvent(meetingState.event) }   // bar middle-click: the shown meeting
 
   function refreshWired() { wiredProc.running = true }
 

@@ -20,6 +20,11 @@
 
 - [x] 4.1 Add `popupOrder(events, nowMs, hidePast)` to `Model.js` (upcoming by start ascending, then finished by start descending, finished dropped when hidden) and make `Panel.qml` rows use it; verify with a `tests/model.test.js` case covering both halves and the hide flag (`node --test tests/model.test.js`) and `qmllint` on `Panel.qml`
 
-## 5. Release
+## 5. Instant settings and stacked cards
 
-- [x] 5.1 Bump `version` in `manifest.json` to 0.2.0 and add a matching `## 0.2.0` entry at the top of `CHANGELOG.md` in the style of the existing entries describing the reminder card; verify the manifest version and the top changelog heading match and `python3 -m unittest discover -s tests` passes
+- [x] 5.1 Refresh the service clock when settings are pushed, reset the hold-back map on lead-time or reminder changes, and cap the effective lead at the horizon (also in the popup field's maximum); verify the structure tests pass and `qmllint` is clean on `Service.qml`, `BarWidget.qml`, `Panel.qml`
+- [x] 5.2 Add `Model.dueReminders` (per-meeting judgement, soonest first, capped at three) with a `tests/model.test.js` case for cap, lead, dismissed, snoozed and in-call; make the service expose the list and the window render one card per entry with per-meeting Join, Remind me and Dismiss; verify `node --test`, the structure tests and `qmllint` on `ReminderCard.qml`
+
+## 6. Release
+
+- [x] 6.1 Bump `version` in `manifest.json` to 0.2.0 and add a matching `## 0.2.0` entry at the top of `CHANGELOG.md` in the style of the existing entries describing the reminder card; verify the manifest version and the top changelog heading match and `python3 -m unittest discover -s tests` passes

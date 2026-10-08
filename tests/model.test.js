@@ -4,7 +4,7 @@ const assert = require("node:assert/strict")
 const fs = require("fs"), path = require("path")
 
 const src = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(".pragma library", "")
-const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.fmtTime=fmtTime;")(M)
+const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.dueReminders=dueReminders;exports.fmtTime=fmtTime;")(M)
 
 const now = Date.UTC(2026, 9, 7, 9, 0, 0)
 const ev = (id, startMin, lenMin = 30, extra = {}) => ({
@@ -115,6 +115,19 @@ test("popup lists upcoming nearest-first, then finished most-recent-first, or hi
   assert.deepEqual(ids(M.popupOrder(day, now, false)), ["running", "soon", "later", "recent", "old"])
   assert.deepEqual(ids(M.popupOrder(day, now, true)), ["running", "soon", "later"])
   assert.deepEqual(M.popupOrder(null, now, false), [])
+})
+
+test("due reminders: one card per due meeting, soonest first, capped at three", () => {
+  const due = (events, o = {}) => M.dueReminders(events, now, o.inCall || false, false, 0, 60, o.dismissed || {}, o.lead ?? 15, o.remindAt || {})
+  const ids = (list) => list.map((r) => r.event.id)
+  const day = [ev("later", 40), ev("running", -3), ev("soon", 2), ev("next", 10), ev("old", -60, 30)]
+  assert.deepEqual(ids(due(day, { lead: 60 })), ["running", "soon", "next"], "capped at three, soonest first")
+  assert.deepEqual(due(day, { lead: 60 }).map((r) => r.kind), ["now", "upcoming", "upcoming"])
+  assert.deepEqual(ids(due(day, { lead: 5 })), ["running", "soon"], "lead time applies per meeting")
+  assert.deepEqual(ids(due(day, { lead: 60, dismissed: { running: true } })), ["soon", "next", "later"], "a freed slot admits the next meeting")
+  assert.deepEqual(ids(due(day, { lead: 60, remindAt: { soon: now + 60000 } })), ["running", "next", "later"], "a snoozed meeting steps aside")
+  assert.deepEqual(due(day, { inCall: true }), [], "nothing while in a call")
+  assert.deepEqual(due([]), [])
 })
 
 test("fmtTime renders local HH:MM and tolerates garbage", () => {

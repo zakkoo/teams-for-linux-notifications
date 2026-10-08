@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+Every due meeting now gets its own reminder card. Cards stack soonest first,
+at most three at a time, each with its own Join, Remind me and Dismiss; a
+further meeting takes a slot as soon as one frees up. A running meeting you
+have not joined keeps its card until you act on it, as before.
+
 ## 0.2.2
 
 Settings now take effect the instant they are saved: the bar label, the

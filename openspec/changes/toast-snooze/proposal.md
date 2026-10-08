@@ -7,6 +7,7 @@ The optional reminder is a one-shot desktop notification: it fires once at the l
 ## What Changes
 
 - **BREAKING**: The desktop notification (`omarchy-notification-send`) is replaced by a reminder card the plugin draws itself as an overlay window on the focused screen. The `toast` setting keeps its key and now enables this card.
+- Every due meeting gets its own card, stacked soonest first, at most three at a time. Settings apply the instant they are saved.
 - The card shows the meeting subject and a countdown, and offers three buttons: **Join** (only when the meeting has a join link), **Remind me in N min**, and **Dismiss**. Clicking the card body does nothing.
 - **Remind me in N min** hides the card and shows it again after half the remaining time to the start (N = remaining minutes / 2, rounded down, minimum 1). Each reopened card recomputes N from the new remaining time. At one minute remaining or once the meeting has started, the snooze button is no longer offered.
 - **Dismiss** hides the card and marks the meeting as dismissed, the same as middle-clicking the widget today.

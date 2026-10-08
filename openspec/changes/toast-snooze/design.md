@@ -35,6 +35,10 @@ See proposal.md for motivation. Facts that shape the approach, all verified agai
 
 **"Now" transition during snooze.** A snooze is half the shown countdown, so by construction it always ends before the start. `remindAt` therefore applies uniformly in every state with no "now" special case, and a snoozed meeting still re-shows the card at its start. The same field doubles as "never again": Join from the card sets it to Infinity, which keeps the card off while the bar continues to show the meeting until Teams reports the call. The "now" card has no Remind-me button, so there is no loop.
 
+**One card per due meeting, stacked, capped at three.** The service no longer derives the card from the single bar state. `Model.dueReminders` judges every event on its own by running the same label rules on a one-event list, applies the lead time and the per-event hold-back, sorts soonest first and stops at three. Stacking was chosen over pagination because each card keeps its own buttons and nothing is hidden behind a counter; back-to-back meetings when running late are the common case. The cap keeps the overlay bounded; a later meeting takes a slot as soon as one frees. The bar label stays single.
+
+**Settings apply instantly.** Pushing settings also refreshes the service clock so every binding re-evaluates at once. Changing the lead time or toggling the reminder resets the hold-back map, and the effective lead time is `min(lead, horizon)` because a meeting outside the horizon is never in the list.
+
 **Card visibility is a binding.** `visible: toast && due && !inCall && meetingState.event`. Because `meetingState` already handles in-call, ended and dismissed events by returning a different state, "closes when the user joins elsewhere / meeting ends / dismissed from the bar" costs nothing.
 
 **Settings keys stay.** Renaming `toast` or `leadMinutes` would orphan existing shell.json entries. Only labels change, in `manifest.json` and `Panel.qml`. The default lead time stays at 2 minutes; the user's 15-minute example is a setting they can raise.
