@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+The reminder card now disappears the moment Join, Remind me or Dismiss is
+pressed, and a middle-click dismissal clears the bar at once. Both used to wait
+for the next 15-second refresh.
+
 ## 0.2.0
 
 The optional reminder is now a card the widget draws itself, with Join,

@@ -70,9 +70,11 @@ Item {
   readonly property bool reminderDue: toast && !inCall && !!meetingState.event
     && Model.toastDue(meetingState, nowMs, leadMinutes, remindAt[meetingState.event.id])
 
+  // Both maps are replaced with a copy: QML emits no change for a var property
+  // that is handed the same object back, and the card must react at once.
   function holdReminder(untilMs) {
     if (!meetingState.event) return
-    var r = remindAt; r[meetingState.event.id] = untilMs; remindAt = r
+    var r = Object.assign({}, remindAt); r[meetingState.event.id] = untilMs; remindAt = r
   }
   function snooze() {
     var m = Model.snoozeMinutes(meetingState)
@@ -98,7 +100,7 @@ Item {
 
   function dismiss() {
     if (!meetingState.event) return
-    var d = dismissed; d[meetingState.event.id] = true; dismissed = d
+    var d = Object.assign({}, dismissed); d[meetingState.event.id] = true; dismissed = d
   }
 
   function refreshWired() { wiredProc.running = true }

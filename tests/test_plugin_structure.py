@@ -96,6 +96,10 @@ class QmlContracts(unittest.TestCase):
         for fn in ("joinFromCard", "snooze", "dismiss"):
             self.assertIn(f"svc.{fn}()", card)
             self.assertIn(f"function {fn}()", self.svc)
+        # A var property handed the same object back emits no change; the card and bar must react at once.
+        for prop in ("remindAt", "dismissed"):
+            self.assertNotRegex(self.svc, rf"var \w+ = {prop};", f"{prop} must be replaced with a copy, not mutated in place")
+            self.assertIn(f"Object.assign({{}}, {prop})", self.svc)
 
     def test_referenced_files_exist(self):
         for src in (self.bw, self.panel, self.svc, read("ReminderCard.qml")):
