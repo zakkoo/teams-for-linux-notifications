@@ -19,12 +19,18 @@ Item {
   property string omarchyPath: ""
 
   // Pushed by the widget from its shell.json settings.
-  property int horizonMinutes: 15
-  property int leadMinutes: 2
-  property bool toast: false
-  property int pollMinutes: 5
-  property int mqttPort: 1883
-  property string mqttPrefix: "teams"
+  readonly property var defaults: Plugin.ServiceRegistry.defaults
+  property int horizonMinutes: defaults.horizonMinutes
+  property int leadMinutes: defaults.leadMinutes
+  property bool toast: defaults.toast
+  property int pollMinutes: defaults.pollMinutes
+  property int mqttPort: defaults.mqttPort
+  property string mqttPrefix: defaults.mqttPrefix
+
+  // The bar, cards and countdowns re-evaluate on this tick (the spec's "within 15 seconds").
+  readonly property int tickMs: 15000
+  // A crashed bridge comes back after this (the spec's "short delay").
+  readonly property int bridgeRestartDelayMs: 3000
 
   // Bridge state, one JSON line per change on stdout.
   property bool connected: false
@@ -183,7 +189,7 @@ Item {
     }
   }
 
-  Timer { id: restartTimer; interval: 3000; onTriggered: if (!bridge.running) bridge.running = true }
+  Timer { id: restartTimer; interval: root.bridgeRestartDelayMs; onTriggered: if (!bridge.running) bridge.running = true }
 
   Process {
     id: wiredProc
@@ -193,7 +199,7 @@ Item {
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.teamsWired = String(text).trim() === "connected" }
   }
 
-  Timer { interval: 15000; running: true; repeat: true; onTriggered: root.nowMs = Date.now() }
+  Timer { interval: root.tickMs; running: true; repeat: true; onTriggered: root.nowMs = Date.now() }
 
   Component.onCompleted: Plugin.ServiceRegistry.instance = root
   Component.onDestruction: {

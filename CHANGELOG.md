@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.6
+
+No visible change. The setting defaults now live in one place in the plugin
+(pinned to the manifest by a test) instead of being repeated in the widget,
+the popup and the service, and the 15-second refresh tick and the 3-second
+bridge restart delay are named rules rather than inline numbers.
+
 ## 0.3.5
 
 Five fixes. A "meeting started" signal from Teams that matched no calendar

@@ -14,12 +14,12 @@ BarWidget {
 
   function pushSettings() {
     if (!svc) return
-    svc.horizonMinutes = setting("horizonMinutes", 15)
-    svc.leadMinutes = setting("leadMinutes", 2)
-    svc.toast = setting("toast", false) === true
-    svc.pollMinutes = setting("pollMinutes", 5)
-    svc.mqttPort = setting("mqttPort", 1883)
-    svc.mqttPrefix = String(setting("mqttPrefix", "teams"))
+    svc.horizonMinutes = setting("horizonMinutes", Plugin.ServiceRegistry.defaults.horizonMinutes)
+    svc.leadMinutes = setting("leadMinutes", Plugin.ServiceRegistry.defaults.leadMinutes)
+    svc.toast = setting("toast", Plugin.ServiceRegistry.defaults.toast) === true
+    svc.pollMinutes = setting("pollMinutes", Plugin.ServiceRegistry.defaults.pollMinutes)
+    svc.mqttPort = setting("mqttPort", Plugin.ServiceRegistry.defaults.mqttPort)
+    svc.mqttPrefix = String(setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
     svc.nowMs = Date.now()   // re-evaluate label, reminder and countdowns now, not at the next tick
   }
   onSvcChanged: { pushSettings(); injectPanel() }
@@ -33,8 +33,8 @@ BarWidget {
   readonly property string label: setupMode ? "" : meetingState.title
   readonly property string suffix: setupMode ? "" : (meetingState.suffix || "")
   property real maxLabelWidth: 180
-  readonly property string scrollMode: String(setting("scroll", "Always"))
-  readonly property int scrollTimes: Math.max(1, setting("scrollTimes", 3))
+  readonly property string scrollMode: String(setting("scroll", Plugin.ServiceRegistry.defaults.scroll))
+  readonly property int scrollTimes: Math.max(1, setting("scrollTimes", Plugin.ServiceRegistry.defaults.scrollTimes))
   property int scrollRuns: 0
   readonly property bool needsScroll: fullTitle.width > maxLabelWidth
   readonly property bool scrolling: needsScroll && !opened && (scrollMode === "Always" || (scrollMode === "A few times" && scrollRuns < scrollTimes))

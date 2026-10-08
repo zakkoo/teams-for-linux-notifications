@@ -30,7 +30,7 @@ Panel {
   readonly property bool languageUnsupported: systemLanguage !== "" && supportedLanguages.indexOf(systemLanguage) < 0
   readonly property string issueUrl: "https://github.com/zakkoo/teams-for-linux-notifications/issues/new?title=" + encodeURIComponent("Support Teams in " + systemLanguage)
   function supportedList() { return supportedLanguages.map(function (l) { return languageNames[l] }).join(", ") }
-  readonly property bool hidePast: setting("hidePast", false) === true
+  readonly property bool hidePast: setting("hidePast", Plugin.ServiceRegistry.defaults.hidePast) === true
   readonly property real nowMs: w ? w.nowMs : Date.now()
   // Today nearest-first, finished most recent first (empty while hidden, count kept for the toggle).
   readonly property var day: Model.splitDay({ events: w ? w.events : [], nowMs: nowMs, hidePast: hidePast })
@@ -57,7 +57,7 @@ Panel {
     id: actionProc
     property string action: "connect"
     command: ["/usr/bin/python3", (w ? w.scriptDir : "") + "teams-config.py", action,
-              "--port", String(w ? w.mqttPort : 1883), "--prefix", w ? w.mqttPrefix : "teams"]
+              "--port", String(w ? w.mqttPort : Plugin.ServiceRegistry.defaults.mqttPort), "--prefix", w ? w.mqttPrefix : Plugin.ServiceRegistry.defaults.mqttPrefix]
     stdout: StdioCollector { waitForEnd: true }
     onExited: function(code) {
       if (w) w.refreshWired()
@@ -266,14 +266,14 @@ Panel {
         SettingNumber {
           label: "Show the next meeting this many minutes ahead"
           from: 1; to: 240
-          value: root.setting("horizonMinutes", 15)
+          value: root.setting("horizonMinutes", Plugin.ServiceRegistry.defaults.horizonMinutes)
           hint: "The bar stays empty until a meeting is this close. 15 means you see it a quarter of an hour before it starts."
           onModified: function(v) { root.save("horizonMinutes", v) }
         }
         SettingNumber {
           label: "Check the calendar every (minutes)"
           from: 1; to: 60
-          value: root.setting("pollMinutes", 5)
+          value: root.setting("pollMinutes", Plugin.ServiceRegistry.defaults.pollMinutes)
           hint: "How often new or moved meetings are picked up from Teams. 5 is plenty; lower only if your calendar changes constantly."
           onModified: function(v) { root.save("pollMinutes", v) }
         }
@@ -281,7 +281,7 @@ Panel {
           width: parent.width
           label: "Long titles in the bar"
           options: ["Always", "Never", "A few times"]
-          value: String(root.setting("scroll", "Always"))
+          value: String(root.setting("scroll", Plugin.ServiceRegistry.defaults.scroll))
           foreground: root.fg; fontFamily: root.fontFamily
           onChanged: function(v) { root.save("scroll", v) }
         }
@@ -292,10 +292,10 @@ Panel {
           color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
         }
         SettingNumber {
-          visible: String(root.setting("scroll", "Always")) === "A few times"
+          visible: String(root.setting("scroll", Plugin.ServiceRegistry.defaults.scroll)) === "A few times"
           label: "How many times to scroll"
           from: 1; to: 20
-          value: root.setting("scrollTimes", 3)
+          value: root.setting("scrollTimes", Plugin.ServiceRegistry.defaults.scrollTimes)
           hint: "After that the title stays put, cut at the edge."
           onModified: function(v) { root.save("scrollTimes", v) }
         }
@@ -303,16 +303,16 @@ Panel {
           width: parent.width
           label: "Reminder card as well"
           description: "Besides the bar, show a card with Join, Remind me and Dismiss when a meeting is due. Clicking the card itself does nothing. Off keeps everything in the bar."
-          checked: root.setting("toast", false) === true
+          checked: root.setting("toast", Plugin.ServiceRegistry.defaults.toast) === true
           foreground: root.fg; fontFamily: root.fontFamily
           titleSize: Style.font.body
           onClicked: root.save("toast", !checked)
         }
         SettingNumber {
-          visible: root.setting("toast", false) === true
+          visible: root.setting("toast", Plugin.ServiceRegistry.defaults.toast) === true
           label: "Remind me this many minutes before the start"
-          from: 0; to: Math.min(60, root.setting("horizonMinutes", 15))
-          value: root.setting("leadMinutes", 2)
+          from: 0; to: Math.min(60, root.setting("horizonMinutes", Plugin.ServiceRegistry.defaults.horizonMinutes))
+          value: root.setting("leadMinutes", Plugin.ServiceRegistry.defaults.leadMinutes)
           hint: "When the reminder card first appears, never earlier than the meeting shows in the bar. Remind me halves what is left each time. 0 means right when the meeting starts."
           onModified: function(v) { root.save("leadMinutes", v) }
         }
@@ -330,7 +330,7 @@ Panel {
           visible: root.advancedOpen
           label: "Local port Teams for Linux talks to"
           from: 1024; to: 65535
-          value: root.setting("mqttPort", 1883)
+          value: root.setting("mqttPort", Plugin.ServiceRegistry.defaults.mqttPort)
           hint: "Only reachable from this computer. After changing it, press Connect again and restart Teams for Linux."
           onModified: function(v) { root.save("mqttPort", v) }
         }
@@ -345,9 +345,9 @@ Panel {
           }
           TextField {
             width: Style.space(120)
-            text: String(root.setting("mqttPrefix", "teams"))
+            text: String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
             foreground: root.fg
-            onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", "teams"))) root.save("mqttPrefix", text.trim())
+            onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))) root.save("mqttPrefix", text.trim())
           }
         }
 

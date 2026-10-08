@@ -65,6 +65,16 @@ class QmlContracts(unittest.TestCase):
         for key in set(re.findall(r'setting\("(\w+)"', self.bw + self.panel)):
             self.assertIn(key, SCHEMA, key)
 
+    def test_setting_defaults_live_in_one_place_and_match_the_manifest(self):
+        # The manifest is the source of truth; QML keeps one mirror in the singleton and reads it everywhere.
+        reg = read("ServiceRegistry.qml")
+        block = re.search(r"readonly property var defaults: \(\{(.*?)\}\)", reg, re.S).group(1)
+        declared = {k: json.loads(v) for k, v in re.findall(r'(\w+): ("[^"]*"|true|false|\d+)', block)}
+        self.assertEqual(declared, M["barWidget"]["defaults"])
+        for src in (self.bw, self.panel, self.svc):
+            self.assertNotRegex(src, r'setting\("\w+", (?!Plugin\.ServiceRegistry\.defaults\.)', "a settings fallback must come from ServiceRegistry.defaults")
+        self.assertNotRegex(self.panel + self.bw, r"\b1883\b|\"teams\"", "no inline copies of the MQTT defaults")
+
     def test_every_schema_key_is_used_somewhere(self):
         for key in SCHEMA:
             self.assertRegex(self.bw + self.panel, rf'setting\("{key}"', f"{key} declared but never read")
@@ -117,6 +127,12 @@ class QmlContracts(unittest.TestCase):
         for m in re.finditer(r"(?m)^(.*)inCallEvent = meetingState\.event", self.svc):
             line = m.group(0)
             self.assertTrue("onInCallChanged" in line or "if (inCall)" in line or "inCallEvent === null" in line, f"unguarded re-point: {line.strip()}")
+
+    def test_timers_are_named_rules(self):
+        # 15 s tick and 3 s restart delay are promised by the specs; they are named, not inline.
+        self.assertRegex(self.svc, r"readonly property int tickMs: 15000")
+        self.assertRegex(self.svc, r"readonly property int bridgeRestartDelayMs: 3000")
+        self.assertNotRegex(self.svc, r"interval: \d+")
 
     def test_deliberate_bridge_restart_is_not_an_error(self):
         # A settings change restarts the bridge; onExited must not report that as "bridge exited".
