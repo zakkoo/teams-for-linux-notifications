@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7
+
+Hovering a cut-off meeting title or location now shows the whole text. The
+tooltip used to run past the panel's edge and get clipped, so the longest
+titles, the ones that needed it, were the ones it could not show. It now
+wraps inside the panel.
+
 ## 0.3.6
 
 No visible change. The setting defaults now live in one place in the plugin

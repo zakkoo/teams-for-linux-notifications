@@ -151,6 +151,8 @@ Panel {
           visible: subjectMouse.containsMouse && subjectText.truncated
           text: rowItem.modelData.subject
           fontFamily: root.fontFamily
+          width: Math.min(implicitWidth, root.width - Style.space(32))
+          Component.onCompleted: contentItem.wrapMode = Text.Wrap
         }
       }
       Text {
@@ -169,6 +171,8 @@ Panel {
           visible: locationMouse.containsMouse && locationText.truncated
           text: rowItem.location
           fontFamily: root.fontFamily
+          width: Math.min(implicitWidth, root.width - Style.space(32))
+          Component.onCompleted: contentItem.wrapMode = Text.Wrap
         }
       }
       Button {
