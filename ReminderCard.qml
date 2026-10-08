@@ -113,7 +113,7 @@ PanelWindow {
             Button {
               text: "Dismiss"
               bordered: true; foreground: root.muted; fontFamily: root.fontFamily
-              onClicked: if (root.svc) root.svc.dismissEvent(card.event)
+              onClicked: if (root.svc) root.svc.dismissReminder(card.modelData)
             }
           }
         }

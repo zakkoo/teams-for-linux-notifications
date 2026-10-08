@@ -151,12 +151,15 @@ Panel {
               required property var modelData
               readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
               readonly property bool past: Date.parse(modelData.end) <= root.nowMs
-              readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : (past ? root.muted : root.fg)
+              // Skipped by middle-click or by dismissing a started meeting's card: shown dimmed, one click restores.
+              readonly property bool skipped: !past && !!w && w.dismissed[modelData.id] === true
+              readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : (past || skipped ? root.muted : root.fg)
               readonly property string location: modelData.location || ""
               readonly property bool joinable: (modelData.joinUrl || "") !== ""
+              readonly property bool hasButton: joinable || skipped
               width: listColumn.width
               height: root.rowHeight
-              opacity: past ? 0.55 : 1
+              opacity: past || skipped ? 0.55 : 1
               Text {
                 id: timeText
                 anchors.left: parent.left
@@ -169,8 +172,8 @@ Panel {
                 id: subjectText
                 anchors.left: timeText.right
                 anchors.leftMargin: Style.space(10)
-                anchors.right: rowItem.joinable ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
-                anchors.rightMargin: rowItem.joinable || locationText.visible ? Style.space(10) : 0
+                anchors.right: rowItem.hasButton ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
+                anchors.rightMargin: rowItem.hasButton || locationText.visible ? Style.space(10) : 0
                 anchors.verticalCenter: parent.verticalCenter
                 textFormat: Text.PlainText
                 text: rowItem.modelData.subject
@@ -190,7 +193,7 @@ Panel {
                 id: locationText
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: (rowItem.modelData.joinUrl || "") === "" && rowItem.location !== ""
+                visible: !rowItem.hasButton && rowItem.location !== ""
                 textFormat: Text.PlainText
                 text: rowItem.location
                 elide: Text.ElideRight
@@ -208,12 +211,16 @@ Panel {
                 id: joinBtn
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Join"
-                visible: rowItem.joinable
+                text: rowItem.skipped ? "Skipped · restore" : "Join"
+                visible: rowItem.hasButton
                 fontFamily: root.fontFamily
-                foreground: root.fg
+                foreground: rowItem.skipped ? root.muted : root.fg
                 bordered: true
-                onClicked: { if (w) w.join(rowItem.modelData.joinUrl); root.close() }
+                onClicked: {
+                  if (!w) return
+                  if (rowItem.skipped) w.restore(rowItem.modelData)
+                  else { w.join(rowItem.modelData.joinUrl); root.close() }
+                }
               }
             }
           }

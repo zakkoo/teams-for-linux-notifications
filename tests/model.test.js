@@ -4,7 +4,7 @@ const assert = require("node:assert/strict")
 const fs = require("fs"), path = require("path")
 
 const src = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(".pragma library", "")
-const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.dueReminders=dueReminders;exports.fmtTime=fmtTime;")(M)
+const M = {}; new Function("exports", src + "\nexports.labelState=labelState;exports.toastDue=toastDue;exports.snoozeMinutes=snoozeMinutes;exports.popupOrder=popupOrder;exports.dueReminders=dueReminders;exports.dismissUntil=dismissUntil;exports.fmtTime=fmtTime;")(M)
 
 const now = Date.UTC(2026, 9, 7, 9, 0, 0)
 const ev = (id, startMin, lenMin = 30, extra = {}) => ({
@@ -87,7 +87,7 @@ test("toast is due at lead time, at start, but not long after", () => {
   assert.equal(M.toastDue(S([ev("X", 2)]), now, 2), true)
   assert.equal(M.toastDue(S([ev("X", 3)]), now, 2), false)
   assert.equal(M.toastDue(S([ev("X", -1)]), now, 0), true)
-  assert.equal(M.toastDue(S([ev("X", -30, 60)]), now, 0), false, "shell restart mid-meeting stays silent")
+  assert.equal(M.toastDue(S([ev("X", -30, 60)]), now, 0), true, "a running, unjoined meeting stays due until acted on")
   assert.equal(M.toastDue(S([]), now, 2), false)
   assert.equal(M.toastDue(S([], { started: true, pulseAt: now }), now, 2), false, "no event, nothing to announce")
 })
@@ -99,6 +99,14 @@ test("a snooze holds the reminder back until its deadline", () => {
   assert.equal(M.toastDue(up, now, 15, undefined), true, "never snoozed")
   assert.equal(M.toastDue(S([ev("X", -1)]), now, 0, now - 1), true, "snooze elapsed, meeting started")
   assert.equal(M.toastDue(S([ev("X", -1)]), now, 0, Infinity), false, "joined from the card: never again")
+})
+
+test("dismiss before the start only holds the card until the start; after it, it skips the meeting", () => {
+  const up = S([ev("X", 8)])
+  assert.equal(M.dismissUntil(up), Date.parse(up.event.start))
+  assert.equal(M.toastDue(up, now, 15, M.dismissUntil(up)), false, "early card silenced")
+  assert.equal(M.toastDue(S([ev("X", 0)]), now, 15, Date.parse(up.event.start) - 8 * 60000), true, "start still announces itself")
+  assert.equal(M.dismissUntil(S([ev("X", -1)])), null, "started: skip for good")
 })
 
 test("snooze halves the countdown, floors at 1, and is not offered at the end or once started", () => {

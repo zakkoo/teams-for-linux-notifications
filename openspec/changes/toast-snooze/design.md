@@ -39,6 +39,10 @@ See proposal.md for motivation. Facts that shape the approach, all verified agai
 
 **Settings apply instantly.** Pushing settings also refreshes the service clock so every binding re-evaluates at once. Changing the lead time or toggling the reminder resets the hold-back map, and the effective lead time is `min(lead, horizon)` because a meeting outside the horizon is never in the list.
 
+**Dismiss means two things, by state.** Before the start a card is a reminder, so Dismiss only holds that meeting back until its start time (the same hold-back map a snooze uses). Once started, the card is the meeting, so Dismiss skips it, exactly like the bar's middle-click. The first version conflated the two and a user who dismissed an early card lost the start announcement and the bar entry without any trace in the popup. Skipped meetings are now dimmed in the popup with a restore button, so the state is visible and reversible.
+
+**A running card never times out.** The old "silent after five minutes" rule, meant for shell restarts mid-meeting, also removed a live "now" card after five minutes. It is gone: being in the call hides cards anyway, and after a restart a card for a running meeting you have not joined is correct. Leaving a call marks that meeting handled so the bar and cards stay quiet for it.
+
 **Card visibility is a binding.** `visible: toast && due && !inCall && meetingState.event`. Because `meetingState` already handles in-call, ended and dismissed events by returning a different state, "closes when the user joins elsewhere / meeting ends / dismissed from the bar" costs nothing.
 
 **Settings keys stay.** Renaming `toast` or `leadMinutes` would orphan existing shell.json entries. Only labels change, in `manifest.json` and `Panel.qml`. The default lead time stays at 2 minutes; the user's 15-minute example is a setting they can raise.

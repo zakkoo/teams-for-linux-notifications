@@ -25,6 +25,10 @@
 - [x] 5.1 Refresh the service clock when settings are pushed, reset the hold-back map on lead-time or reminder changes, and cap the effective lead at the horizon (also in the popup field's maximum); verify the structure tests pass and `qmllint` is clean on `Service.qml`, `BarWidget.qml`, `Panel.qml`
 - [x] 5.2 Add `Model.dueReminders` (per-meeting judgement, soonest first, capped at three) with a `tests/model.test.js` case for cap, lead, dismissed, snoozed and in-call; make the service expose the list and the window render one card per entry with per-meeting Join, Remind me and Dismiss; verify `node --test`, the structure tests and `qmllint` on `ReminderCard.qml`
 
-## 6. Release
+## 6. Dismiss semantics and handled meetings
 
-- [x] 6.1 Bump `version` in `manifest.json` to 0.2.0 and add a matching `## 0.2.0` entry at the top of `CHANGELOG.md` in the style of the existing entries describing the reminder card; verify the manifest version and the top changelog heading match and `python3 -m unittest discover -s tests` passes
+- [x] 6.1 Add `Model.dismissUntil` (hold until start before the start, skip after) and drop the five-minute cut-off from `toastDue`; wire the card's Dismiss to `dismissReminder`, mark a meeting handled when its call ends, add `restore` and the popup's dimmed "Skipped · restore" row; move the bridge's calendar window to local midnight; verify `node --test`, the structure and bridge tests, and `qmllint` on the changed QML
+
+## 7. Release
+
+- [x] 7.1 Bump `version` in `manifest.json` to 0.2.0 and add a matching `## 0.2.0` entry at the top of `CHANGELOG.md` in the style of the existing entries describing the reminder card; verify the manifest version and the top changelog heading match and `python3 -m unittest discover -s tests` passes

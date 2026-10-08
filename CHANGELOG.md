@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+Dismissing a reminder card before the meeting starts now only silences that
+early reminder: the meeting stays in the bar and announces itself at the start
+with Join and Dismiss. Dismissing a started meeting's card skips the meeting,
+and the popup now shows skipped meetings dimmed with a one-click restore. A
+started meeting's card no longer vanishes after five minutes; it stays until
+you act. Once you leave a meeting's call the bar stays quiet for it instead of
+turning urgent again. The calendar day is now the local day, not the UTC day.
+
 ## 0.3.0
 
 Every due meeting now gets its own reminder card. Cards stack soonest first,

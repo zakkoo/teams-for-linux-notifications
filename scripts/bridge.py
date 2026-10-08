@@ -183,7 +183,8 @@ def on_message(topic, payload):
 
 def request_calendar():
     if client and f"{PREFIX}/command" in client.subs:
-        s = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Local midnight, not UTC: "today" must mean the user's day, or evening meetings slide across days.
+        s = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
         cmd = {"action": "get-calendar", "startDate": s.isoformat(), "endDate": (s + timedelta(days=1)).isoformat()}
         try:
             client.publish(f"{PREFIX}/command", json.dumps(cmd).encode())

@@ -42,18 +42,22 @@ function labelState(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin
   return { kind: "none", event: null, title: "", suffix: "", text: "" }
 }
 
-// The reminder is due when the state is "now" or the event starts within
-// leadMin, but never for a meeting already running for a while: a shell
-// restart must not re-announce the meeting you are sitting in. remindAt (ms,
-// optional) holds the card back until then: a snooze deadline, or Infinity
-// once the user joined from the card.
+// The reminder is due when the state is "now" (and stays due until the user
+// acts, the call is joined or the meeting ends) or the event starts within
+// leadMin. remindAt (ms, optional) holds the card back until then: a snooze
+// deadline, the start time after an early dismiss, or Infinity once joined.
 function toastDue(state, nowMs, leadMin, remindAt) {
   if (!state.event) return false
-  var start = Date.parse(state.event.start)
-  if (nowMs - start > NOW_MATCH_MS) return false
   if (remindAt && nowMs < remindAt) return false
   if (state.kind === "now") return true
-  return state.kind === "upcoming" && start - nowMs <= leadMin * 60000
+  return state.kind === "upcoming" && Date.parse(state.event.start) - nowMs <= leadMin * 60000
+}
+
+// Dismissing a card before the start only silences the early reminder: the
+// start still announces itself. Returns the hold-back time, or null when the
+// meeting has started and dismiss means "skip it for good".
+function dismissUntil(state) {
+  return state.kind === "upcoming" ? Date.parse(state.event.start) : null
 }
 
 // Half the shown countdown, so a snooze always ends before the meeting starts.

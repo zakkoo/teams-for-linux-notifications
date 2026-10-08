@@ -69,7 +69,7 @@ When the reminder setting is enabled, the widget SHALL show a reminder card as a
 - **THEN** no card is shown
 
 ### Requirement: Reminder card buttons
-Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as the widget's right-click) and close the card. Dismiss SHALL close the card and dismiss the meeting exactly as a middle-click on the widget does. Remind-me SHALL close the card and show it again after half the remaining time to the start, rounded down to whole minutes and never less than one; the button label SHALL state that number of minutes. Each time the card reappears, the countdown and the Remind-me interval SHALL be recomputed from the then-remaining time.
+Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as the widget's right-click) and close the card for good. Dismiss on a card before the start SHALL close that card only; the meeting SHALL still get its card at the start. Dismiss on a started meeting's card SHALL skip the meeting exactly as a middle-click on the widget does. A skipped meeting SHALL appear dimmed in the popup with a one-click restore. Once the user has been in a meeting's call and left it, that meeting SHALL count as handled: no card returns and the bar does not turn urgent for it. Remind-me SHALL close the card and show it again after half the remaining time to the start, rounded down to whole minutes and never less than one; the button label SHALL state that number of minutes. Each time the card reappears, the countdown and the Remind-me interval SHALL be recomputed from the then-remaining time.
 
 #### Scenario: Halving snooze chain
 - **WHEN** the card says "in 15 min" and the user presses "Remind me in 7 min"
@@ -79,9 +79,21 @@ Join SHALL hand the meeting's link to Teams for Linux (with the same fallback as
 - **WHEN** the card reappears with 2 minutes left
 - **THEN** the button says "Remind me in 1 min"; with 1 minute or less left the button is not offered
 
-#### Scenario: Dismiss
-- **WHEN** the user presses Dismiss on the card for "Standup"
-- **THEN** the card closes, the bar no longer shows "Standup", and no further card is shown for it
+#### Scenario: Dismiss before the start
+- **WHEN** the card says "Standup in 8 min" and the user presses Dismiss
+- **THEN** the card closes, the bar keeps counting down to Standup, and at the start a card reading "Standup · now" appears with Join and Dismiss
+
+#### Scenario: Dismiss after the start
+- **WHEN** the user presses Dismiss on the card "Standup · now"
+- **THEN** the card closes, the bar no longer shows Standup, the popup shows Standup dimmed with "Skipped · restore", and no further card is shown for it
+
+#### Scenario: Restore a skipped meeting
+- **WHEN** the user presses "Skipped · restore" in the popup
+- **THEN** the meeting returns to the bar and, if due, its card
+
+#### Scenario: Left the call
+- **WHEN** Teams reports the call for Standup ended while Standup is still running
+- **THEN** the bar does not turn urgent for Standup and no card appears for it
 
 #### Scenario: Join
 - **WHEN** the user presses Join

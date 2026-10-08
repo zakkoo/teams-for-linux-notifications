@@ -94,6 +94,22 @@ Item {
     join(event.joinUrl)
     holdReminder(event, Infinity)
   }
+  // Dismiss on a card: before the start it only silences the early reminder
+  // (the start announces itself); once started it skips the meeting for good.
+  function dismissReminder(state) {
+    var until = Model.dismissUntil(state)
+    if (until === null) dismissEvent(state.event)
+    else holdReminder(state.event, until)
+  }
+
+  // The meeting you were in: once you leave the call it is handled, so the
+  // bar must not turn urgent again and no card may return for it.
+  property var inCallEvent: null
+  onInCallChanged: {
+    if (inCall) inCallEvent = meetingState.event
+    else { dismissEvent(inCallEvent); inCallEvent = null }
+  }
+  onMeetingStateChanged: if (inCall && meetingState.event) inCallEvent = meetingState.event
 
   Loader {
     active: root.reminders.length > 0
@@ -111,7 +127,12 @@ Item {
     if (!event) return
     var d = Object.assign({}, dismissed); d[event.id] = true; dismissed = d
   }
-  function dismiss() { dismissEvent(meetingState.event) }   // bar middle-click: the shown meeting
+  function dismiss() { dismissEvent(meetingState.event) }   // bar middle-click: skip the shown meeting
+  function restore(event) {
+    if (!event) return
+    var d = Object.assign({}, dismissed); delete d[event.id]; dismissed = d
+    var r = Object.assign({}, remindAt); delete r[event.id]; remindAt = r
+  }
 
   function refreshWired() { wiredProc.running = true }
 

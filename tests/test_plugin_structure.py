@@ -93,10 +93,11 @@ class QmlContracts(unittest.TestCase):
         self.assertIn('Qt.resolvedUrl("ReminderCard.qml")', self.svc)
         card = read("ReminderCard.qml")
         self.assertNotIn("MouseArea", re.sub(r"//[^\n]*", "", card), "the card body must be inert; only the buttons act")
-        for fn, arg in (("joinFromCard", "event"), ("snooze", "state"), ("dismissEvent", "event")):
+        for fn, arg in (("joinFromCard", "event"), ("snooze", "state"), ("dismissReminder", "state")):
             self.assertRegex(card, rf"svc\.{fn}\(card\.\w+\)", f"card must call svc.{fn} per meeting")
             self.assertIn(f"function {fn}({arg})", self.svc)
         self.assertIn("function dismiss()", self.svc, "bar middle-click keeps its argument-less dismiss")
+        self.assertIn("w.restore(", self.panel, "a skipped meeting must be restorable from the popup")
         # A var property handed the same object back emits no change; the card and bar must react at once.
         for prop in ("remindAt", "dismissed"):
             self.assertNotRegex(self.svc, rf"var \w+ = {prop};", f"{prop} must be replaced with a copy, not mutated in place")
