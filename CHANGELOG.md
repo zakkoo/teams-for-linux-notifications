@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3
+
+Long titles in the bar no longer collapse to a few letters once scrolling
+stops. The label area was sized from the label's own width, which Qt reports
+as the elided width, so each pass cut the title a little shorter. The full
+width is now measured separately, and the title parks at the left edge when
+static.
+
 ## 0.3.2
 
 Being in a call no longer silences every reminder. Only the meeting the call

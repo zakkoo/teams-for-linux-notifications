@@ -36,8 +36,11 @@ BarWidget {
   readonly property string scrollMode: String(setting("scroll", "Always"))
   readonly property int scrollTimes: Math.max(1, setting("scrollTimes", 3))
   property int scrollRuns: 0
-  readonly property bool scrolling: labelText.needsScroll && !opened && (scrollMode === "Always" || (scrollMode === "A few times" && scrollRuns < scrollTimes))
+  readonly property bool needsScroll: fullTitle.width > maxLabelWidth
+  readonly property bool scrolling: needsScroll && !opened && (scrollMode === "Always" || (scrollMode === "A few times" && scrollRuns < scrollTimes))
   onLabelChanged: scrollRuns = 0
+  // The animation leaves x wherever it stopped; park the title at the left edge when static.
+  onScrollingChanged: if (!scrolling) labelText.x = 0
 
   // Always in the bar: the icon alone says "alive"; dimmed says "no Teams".
   visible: svc !== null
@@ -102,9 +105,18 @@ BarWidget {
       font.pixelSize: Style.font.body
     }
 
+    // The title's full width, measured apart from the label: an elided Text
+    // reports its *elided* width as implicitWidth, so sizing the clip from the
+    // label itself shrinks it a step per pass until only "Bro…" is left.
+    TextMetrics {
+      id: fullTitle
+      font: labelText.font
+      text: root.label
+    }
+
     Item {
       id: scrollClip
-      width: Math.min(root.maxLabelWidth, labelText.implicitWidth)
+      width: Math.min(root.maxLabelWidth, fullTitle.width)
       height: glyph.height
       clip: true
       anchors.verticalCenter: parent.verticalCenter
@@ -118,17 +130,15 @@ BarWidget {
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         font.pixelSize: Style.font.body
         anchors.verticalCenter: parent.verticalCenter
-        property bool needsScroll: implicitWidth > scrollClip.width
         // Static: cut at the clip edge, full title in the hover tooltip.
-        width: root.scrolling ? implicitWidth : scrollClip.width
+        width: root.scrolling ? fullTitle.width : scrollClip.width
         elide: root.scrolling ? Text.ElideNone : Text.ElideRight
-        x: root.scrolling ? x : 0
         NumberAnimation on x {
           running: root.scrolling
           loops: 1
-          duration: Math.max(6000, labelText.implicitWidth * 25)
+          duration: Math.max(6000, fullTitle.width * 25)
           from: scrollClip.width
-          to: -labelText.implicitWidth
+          to: -fullTitle.width
           easing.type: Easing.Linear
           onFinished: { root.scrollRuns += 1; if (root.scrolling) restart() }
         }

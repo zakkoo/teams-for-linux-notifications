@@ -122,6 +122,11 @@ class QmlContracts(unittest.TestCase):
             line = re.search(rf"(?m)^\s+{prop}: (.*)$", self.bw).group(1)
             self.assertNotRegex(line, r"meetingState|connected|setupMode", f"{prop} must not depend on meeting or connection state: {line}")
 
+    def test_label_clip_is_not_sized_from_the_elided_label(self):
+        # An elided Text reports its elided width as implicitWidth; sizing the clip from it collapses the title to "Bro…".
+        self.assertNotIn("labelText.implicitWidth", self.bw)
+        self.assertIn("TextMetrics", self.bw)
+
     def test_widget_exposes_what_the_bar_needs(self):
         for name in ("opened", "popoutSwitchClosing", "tooltipHovered"):
             self.assertRegex(self.bw, rf'property bool {name}\b', name)
