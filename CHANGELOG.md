@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+
+Settings now take effect the instant they are saved: the bar label, the
+reminder card and its countdown re-evaluate immediately instead of at the next
+refresh. Changing the lead time or toggling the reminder clears any pending
+snooze, so the new rule applies cleanly. The lead time is capped at the
+horizon, since a meeting outside the horizon is never shown and could never
+remind.
+
 ## 0.2.1
 
 The reminder card now disappears the moment Join, Remind me or Dismiss is

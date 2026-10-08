@@ -67,8 +67,16 @@ Item {
   // The reminder card exists exactly while it is due: in-call, ended and
   // dismissed meetings already drop out of meetingState, and the 15 s tick
   // re-evaluates a snooze deadline without a timer of its own.
+  // A meeting only enters meetingState inside the horizon, so a lead time
+  // beyond it could never fire; cap it there so the setting stays honest.
+  readonly property int effectiveLead: Math.min(leadMinutes, horizonMinutes)
   readonly property bool reminderDue: toast && !inCall && !!meetingState.event
-    && Model.toastDue(meetingState, nowMs, leadMinutes, remindAt[meetingState.event.id])
+    && Model.toastDue(meetingState, nowMs, effectiveLead, remindAt[meetingState.event.id])
+
+  // Changing the reminder rule starts over: snoozes and "joined" marks made
+  // under the old rule no longer mean anything.
+  onToastChanged: remindAt = ({})
+  onLeadMinutesChanged: remindAt = ({})
 
   // Both maps are replaced with a copy: QML emits no change for a var property
   // that is handed the same object back, and the card must react at once.

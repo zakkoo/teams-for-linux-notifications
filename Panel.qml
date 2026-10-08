@@ -292,9 +292,9 @@ Panel {
         SettingNumber {
           visible: root.setting("toast", false) === true
           label: "Remind me this many minutes before the start"
-          from: 0; to: 60
+          from: 0; to: Math.min(60, root.setting("horizonMinutes", 15))
           value: root.setting("leadMinutes", 2)
-          hint: "When the reminder card first appears. Remind me halves what is left each time. 0 means right when the meeting starts."
+          hint: "When the reminder card first appears, never earlier than the meeting shows in the bar. Remind me halves what is left each time. 0 means right when the meeting starts."
           onModified: function(v) { root.save("leadMinutes", v) }
         }
 

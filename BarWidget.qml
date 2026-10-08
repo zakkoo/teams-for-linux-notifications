@@ -20,6 +20,7 @@ BarWidget {
     svc.pollMinutes = setting("pollMinutes", 5)
     svc.mqttPort = setting("mqttPort", 1883)
     svc.mqttPrefix = String(setting("mqttPrefix", "teams"))
+    svc.nowMs = Date.now()   // re-evaluate label, reminder and countdowns now, not at the next tick
   }
   onSvcChanged: { pushSettings(); injectPanel() }
   onSettingsChanged: { pushSettings(); injectPanel() }
