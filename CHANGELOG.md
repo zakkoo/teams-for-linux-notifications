@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.8
+
+The hover tooltip on a cut-off title or location is fixed for real. The
+0.3.7 attempt measured the wrong item and shrank the tooltip to nothing, so
+the text showed with no frame and spilled over the panel. It is now a proper
+framed tooltip, never wider than the popup, and long text wraps inside it.
+
 ## 0.3.7
 
 Hovering a cut-off meeting title or location now shows the whole text. The

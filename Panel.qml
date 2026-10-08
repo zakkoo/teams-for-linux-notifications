@@ -109,6 +109,13 @@ Panel {
     MouseArea { id: foldMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.toggled() }
   }
 
+  // Hover tooltip for cut text: never wider than the popup content, wraps instead.
+  component Tip: PanelToolTip {
+    fontFamily: root.fontFamily
+    width: Math.min(implicitWidth, column.width)
+    Component.onCompleted: contentItem.wrapMode = Text.Wrap
+  }
+
   // One meeting row; used by both sections.
   component MeetingRow: Item {
       id: rowItem
@@ -147,13 +154,7 @@ Panel {
         font.bold: rowItem.isCurrent
         font.strikeout: rowItem.past
         MouseArea { id: subjectMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-        PanelToolTip {
-          visible: subjectMouse.containsMouse && subjectText.truncated
-          text: rowItem.modelData.subject
-          fontFamily: root.fontFamily
-          width: Math.min(implicitWidth, root.width - Style.space(32))
-          Component.onCompleted: contentItem.wrapMode = Text.Wrap
-        }
+        Tip { visible: subjectMouse.containsMouse && subjectText.truncated; text: rowItem.modelData.subject }
       }
       Text {
         id: locationText
@@ -167,13 +168,7 @@ Panel {
         color: root.muted
         font.family: root.fontFamily; font.pixelSize: Style.font.caption
         MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-        PanelToolTip {
-          visible: locationMouse.containsMouse && locationText.truncated
-          text: rowItem.location
-          fontFamily: root.fontFamily
-          width: Math.min(implicitWidth, root.width - Style.space(32))
-          Component.onCompleted: contentItem.wrapMode = Text.Wrap
-        }
+        Tip { visible: locationMouse.containsMouse && locationText.truncated; text: rowItem.location }
       }
       Button {
         id: joinBtn
