@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+Being in a call no longer silences every reminder. Only the meeting the call
+belongs to is exempt; another meeting that reaches its lead time or starts
+while you are in a call still gets its card, so a clash is visible.
+
 ## 0.3.1
 
 Dismissing a reminder card before the meeting starts now only silences that

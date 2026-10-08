@@ -126,7 +126,7 @@ test("popup lists upcoming nearest-first, then finished most-recent-first, or hi
 })
 
 test("due reminders: one card per due meeting, soonest first, capped at three", () => {
-  const due = (events, o = {}) => M.dueReminders(events, now, o.inCall || false, false, 0, 60, o.dismissed || {}, o.lead ?? 15, o.remindAt || {})
+  const due = (events, o = {}) => M.dueReminders(events, now, o.inCallId || "", false, 0, 60, o.dismissed || {}, o.lead ?? 15, o.remindAt || {})
   const ids = (list) => list.map((r) => r.event.id)
   const day = [ev("later", 40), ev("running", -3), ev("soon", 2), ev("next", 10), ev("old", -60, 30)]
   assert.deepEqual(ids(due(day, { lead: 60 })), ["running", "soon", "next"], "capped at three, soonest first")
@@ -134,7 +134,7 @@ test("due reminders: one card per due meeting, soonest first, capped at three", 
   assert.deepEqual(ids(due(day, { lead: 5 })), ["running", "soon"], "lead time applies per meeting")
   assert.deepEqual(ids(due(day, { lead: 60, dismissed: { running: true } })), ["soon", "next", "later"], "a freed slot admits the next meeting")
   assert.deepEqual(ids(due(day, { lead: 60, remindAt: { soon: now + 60000 } })), ["running", "next", "later"], "a snoozed meeting steps aside")
-  assert.deepEqual(due(day, { inCall: true }), [], "nothing while in a call")
+  assert.deepEqual(ids(due(day, { lead: 60, inCallId: "running" })), ["soon", "next", "later"], "in a call: only that meeting is exempt, a clash still reminds")
   assert.deepEqual(due([]), [])
 })
 

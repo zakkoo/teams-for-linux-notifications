@@ -71,7 +71,7 @@ Item {
   // it could never fire; cap it there so the setting stays honest.
   readonly property int effectiveLead: Math.min(leadMinutes, horizonMinutes)
   readonly property var reminders: toast
-    ? Model.dueReminders(events, nowMs, inCall, meetingStarted, pulseAt, horizonMinutes, dismissed, effectiveLead, remindAt) : []
+    ? Model.dueReminders(events, nowMs, inCall && inCallEvent ? inCallEvent.id : "", meetingStarted, pulseAt, horizonMinutes, dismissed, effectiveLead, remindAt) : []
 
   // Changing the reminder rule starts over: snoozes and "joined" marks made
   // under the old rule no longer mean anything.

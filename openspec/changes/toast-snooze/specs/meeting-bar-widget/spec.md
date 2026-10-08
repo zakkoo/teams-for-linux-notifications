@@ -34,7 +34,7 @@ The popup SHALL list today's meetings with the meetings still to come first, nea
 ## ADDED Requirements
 
 ### Requirement: Reminder card
-When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for every meeting whose time to start is at most the lead time or that is in the "now" state, each meeting judged on its own. Cards SHALL stack soonest-start first, at most three at a time; a further due meeting SHALL get a card as soon as one of the three is gone. A card SHALL show the meeting subject and the time to start (or "now"). It SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. A card SHALL stay until one of its buttons is pressed, its meeting is dismissed elsewhere, the user is in a call, or its meeting ends. Clicking a card anywhere outside its buttons SHALL do nothing. The lead time SHALL be capped at the horizon, since a meeting outside the horizon is never shown.
+When the reminder setting is enabled, the widget SHALL show a reminder card as an overlay on the focused screen for every meeting whose time to start is at most the lead time or that is in the "now" state, each meeting judged on its own. Cards SHALL stack soonest-start first, at most three at a time; a further due meeting SHALL get a card as soon as one of the three is gone. A card SHALL show the meeting subject and the time to start (or "now"). It SHALL offer a Join button when the meeting has a join link, a Dismiss button, and a Remind-me button while the meeting has not started and more than one minute remains. A card SHALL stay until one of its buttons is pressed, its meeting is dismissed elsewhere, the user is in that meeting's call, or its meeting ends. Being in a call exempts only the meeting the call belongs to; other meetings still get their cards. Clicking a card anywhere outside its buttons SHALL do nothing. The lead time SHALL be capped at the horizon, since a meeting outside the horizon is never shown.
 
 #### Scenario: Card appears at the lead time
 - **WHEN** the reminder is on, the lead time is 15 minutes, and "Standup" with a join link starts in 15 minutes
@@ -53,8 +53,12 @@ When the reminder setting is enabled, the widget SHALL show a reminder card as a
 - **THEN** the card reads "<subject> · now" and the Remind-me button disappears
 
 #### Scenario: User joins from elsewhere
-- **WHEN** the card is showing and Teams reports an active call
+- **WHEN** the card is showing and Teams reports an active call for that meeting
 - **THEN** the card closes
+
+#### Scenario: Another meeting starts during a call
+- **WHEN** the user is in the call for Standup and Planning reaches its lead time or starts
+- **THEN** Planning gets its card with Join and Dismiss while Standup gets none
 
 #### Scenario: Several meetings due
 - **WHEN** one meeting is running unjoined and two more start in 2 and 10 minutes, all within the lead time

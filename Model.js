@@ -70,13 +70,16 @@ var MAX_REMINDERS = 3
 
 // Every meeting that deserves a reminder card right now, judged on its own
 // with the same rules as the bar label, soonest start first and capped at
-// MAX_REMINDERS so a later meeting waits until a slot frees up. remindAt maps
-// event id to a hold-back time (see toastDue). Returns [{event, kind, minutes}].
-function dueReminders(events, nowMs, inCall, meetingStarted, pulseAtMs, horizonMin, dismissed, leadMin, remindAt) {
+// MAX_REMINDERS so a later meeting waits until a slot frees up. Being in a
+// call exempts only the meeting the call belongs to (inCallEventId); every
+// other meeting still reminds, so a clash is visible. remindAt maps event id
+// to a hold-back time (see toastDue). Returns [{event, kind, minutes}].
+function dueReminders(events, nowMs, inCallEventId, meetingStarted, pulseAtMs, horizonMin, dismissed, leadMin, remindAt) {
   var out = []
   var list = (events || []).slice().sort(function (a, b) { return Date.parse(a.start) - Date.parse(b.start) })
   for (var i = 0; i < list.length && out.length < MAX_REMINDERS; i++) {
-    var s = labelState([list[i]], nowMs, inCall, meetingStarted, pulseAtMs, horizonMin, dismissed)
+    if (inCallEventId && list[i].id === inCallEventId) continue
+    var s = labelState([list[i]], nowMs, false, meetingStarted, pulseAtMs, horizonMin, dismissed)
     if (s.event && toastDue(s, nowMs, leadMin, (remindAt || {})[s.event.id])) out.push({ event: s.event, kind: s.kind, minutes: s.minutes })
   }
   return out
