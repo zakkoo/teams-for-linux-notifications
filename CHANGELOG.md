@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.4
+
+The popup now has two sections: Today with the ongoing and upcoming meetings,
+and Finished at the bottom with its own show/hide toggle. Finished meetings no
+longer share a scrolling list with the rest, so they can never slip in between
+upcoming ones.
+
 ## 0.3.3
 
 Long titles in the bar no longer collapse to a few letters once scrolling

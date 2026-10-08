@@ -3,15 +3,15 @@
 ## MODIFIED Requirements
 
 ### Requirement: Popup meeting list
-The popup SHALL list today's meetings with the meetings still to come first, nearest start at the top, followed by finished meetings, most recently ended first. It SHALL show at most five rows before scrolling, grey out and strike through finished meetings, offer a one-click toggle to hide finished meetings that persists as a setting, and show the plugin version unobtrusively in its bottom-right corner.
+The popup SHALL show today's meetings in two separate sections: "Today" with the ongoing and upcoming meetings, nearest start at the top, and "Finished" at the bottom with the finished meetings, most recently ended first. Finished meetings SHALL never appear in the Today list. Each section SHALL show at most five rows before scrolling on its own. Finished meetings SHALL be greyed out and struck through, and the Finished section SHALL offer a one-click show/hide toggle that persists as a setting. The plugin version SHALL sit unobtrusively in the bottom-right corner.
 
-#### Scenario: Order
+#### Scenario: Two sections
 - **WHEN** today has meetings at 09:00 and 10:00 (finished), one running since 10:50, and more at 11:30 and 14:00, and it is 11:00
-- **THEN** the list reads 10:50, 11:30, 14:00, then 10:00, then 09:00
+- **THEN** Today lists 10:50, 11:30, 14:00 and Finished lists 10:00, then 09:00, underneath
 
 #### Scenario: Many meetings
-- **WHEN** the day has more than five meetings
-- **THEN** the list is five rows tall and scrolls
+- **WHEN** a section has more than five meetings
+- **THEN** that section is five rows tall and scrolls, the other is unaffected
 
 #### Scenario: Finished meeting
 - **WHEN** a meeting's end time has passed
@@ -22,8 +22,8 @@ The popup SHALL list today's meetings with the meetings still to come first, nea
 - **THEN** a tooltip shows the full text
 
 #### Scenario: Hide finished
-- **WHEN** the user clicks "Hide N finished"
-- **THEN** finished meetings disappear from the list and stay hidden on later opens until "Show N finished" is clicked
+- **WHEN** the user clicks "Hide N" in the Finished section
+- **THEN** the finished list collapses, the section header stays, and it remains collapsed on later opens until "Show N" is clicked
 
 ## REMOVED Requirements
 

@@ -33,8 +33,9 @@ Panel {
   readonly property bool hidePast: setting("hidePast", false) === true
   readonly property real nowMs: w ? w.nowMs : Date.now()
   // Latest first, so the rest of the day reads top-down and finished meetings sink to the bottom.
-  readonly property var rows: Model.popupOrder(w ? w.events : [], nowMs, hidePast)
-  readonly property int pastCount: (w ? w.events : []).filter(function (e) { return Date.parse(e.end) <= nowMs }).length
+  readonly property var rows: Model.popupOrder(w ? w.events : [], nowMs, true)
+  readonly property var pastRows: Model.popupOrder(w ? w.events : [], nowMs, false).filter(function (e) { return Date.parse(e.end) <= nowMs })
+  readonly property int pastCount: pastRows.length
   readonly property int rowHeight: Style.space(34)
   readonly property int maxRows: 5
 
@@ -107,6 +108,103 @@ Panel {
     MouseArea { id: foldMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.toggled() }
   }
 
+  // One meeting row; used by both sections.
+  component MeetingRow: Item {
+      id: rowItem
+      required property var modelData
+      readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
+      readonly property bool past: Date.parse(modelData.end) <= root.nowMs
+      // Skipped by middle-click or by dismissing a started meeting's card: shown dimmed, one click restores.
+      readonly property bool skipped: !past && !!w && w.dismissed[modelData.id] === true
+      readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : (past || skipped ? root.muted : root.fg)
+      readonly property string location: modelData.location || ""
+      readonly property bool joinable: (modelData.joinUrl || "") !== ""
+      readonly property bool hasButton: joinable || skipped
+      width: parent.width
+      height: root.rowHeight
+      opacity: past || skipped ? 0.55 : 1
+      Text {
+        id: timeText
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        text: Model.fmtTime(rowItem.modelData.start)
+        color: rowItem.isCurrent ? rowItem.rowColor : root.muted
+        font.family: root.fontFamily; font.pixelSize: Style.font.body
+      }
+      Text {
+        id: subjectText
+        anchors.left: timeText.right
+        anchors.leftMargin: Style.space(10)
+        anchors.right: rowItem.hasButton ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
+        anchors.rightMargin: rowItem.hasButton || locationText.visible ? Style.space(10) : 0
+        anchors.verticalCenter: parent.verticalCenter
+        textFormat: Text.PlainText
+        text: rowItem.modelData.subject
+        elide: Text.ElideRight
+        color: rowItem.rowColor
+        font.family: root.fontFamily; font.pixelSize: Style.font.body
+        font.bold: rowItem.isCurrent
+        font.strikeout: rowItem.past
+        MouseArea { id: subjectMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+        PanelToolTip {
+          visible: subjectMouse.containsMouse && subjectText.truncated
+          text: rowItem.modelData.subject
+          fontFamily: root.fontFamily
+        }
+      }
+      Text {
+        id: locationText
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        visible: !rowItem.hasButton && rowItem.location !== ""
+        textFormat: Text.PlainText
+        text: rowItem.location
+        elide: Text.ElideRight
+        width: Math.min(implicitWidth, Style.space(150))
+        color: root.muted
+        font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+        PanelToolTip {
+          visible: locationMouse.containsMouse && locationText.truncated
+          text: rowItem.location
+          fontFamily: root.fontFamily
+        }
+      }
+      Button {
+        id: joinBtn
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: rowItem.skipped ? "Skipped · restore" : "Join"
+        visible: rowItem.hasButton
+        fontFamily: root.fontFamily
+        foreground: rowItem.skipped ? root.muted : root.fg
+        bordered: true
+        onClicked: {
+          if (!w) return
+          if (rowItem.skipped) w.restore(rowItem.modelData)
+          else { w.join(rowItem.modelData.joinUrl); root.close() }
+        }
+      }
+  }
+
+  // A scrolling list of rows, at most maxRows tall.
+  component MeetingList: Flickable {
+    id: list
+    property var rows: []
+    width: column.width
+    height: Math.min(rows.length, root.maxRows) * root.rowHeight
+    contentWidth: width
+    contentHeight: listCol.implicitHeight
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
+    interactive: contentHeight > height
+    Column {
+      id: listCol
+      width: list.width
+      Repeater { model: list.rows; delegate: MeetingRow {} }
+    }
+  }
+
   PopupCard {
     id: card
     anchorItem: root.anchorItem
@@ -130,117 +228,30 @@ Panel {
         color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.body
       }
 
-      Flickable {
-        id: listFlick
-        width: column.width
-        height: Math.min(root.rows.length, root.maxRows) * root.rowHeight
-        contentWidth: width
-        contentHeight: listColumn.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        interactive: contentHeight > height
+      MeetingList { rows: root.rows }
 
-        Column {
-          id: listColumn
-          width: listFlick.width
-
-          Repeater {
-            model: root.rows
-            delegate: Item {
-              id: rowItem
-              required property var modelData
-              readonly property bool isCurrent: w && w.meetingState.event && w.meetingState.event.id === modelData.id
-              readonly property bool past: Date.parse(modelData.end) <= root.nowMs
-              // Skipped by middle-click or by dismissing a started meeting's card: shown dimmed, one click restores.
-              readonly property bool skipped: !past && !!w && w.dismissed[modelData.id] === true
-              readonly property color rowColor: isCurrent && w.urgent ? (bar ? bar.urgent : Color.urgent) : (past || skipped ? root.muted : root.fg)
-              readonly property string location: modelData.location || ""
-              readonly property bool joinable: (modelData.joinUrl || "") !== ""
-              readonly property bool hasButton: joinable || skipped
-              width: listColumn.width
-              height: root.rowHeight
-              opacity: past || skipped ? 0.55 : 1
-              Text {
-                id: timeText
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: Model.fmtTime(rowItem.modelData.start)
-                color: rowItem.isCurrent ? rowItem.rowColor : root.muted
-                font.family: root.fontFamily; font.pixelSize: Style.font.body
-              }
-              Text {
-                id: subjectText
-                anchors.left: timeText.right
-                anchors.leftMargin: Style.space(10)
-                anchors.right: rowItem.hasButton ? joinBtn.left : (locationText.visible ? locationText.left : parent.right)
-                anchors.rightMargin: rowItem.hasButton || locationText.visible ? Style.space(10) : 0
-                anchors.verticalCenter: parent.verticalCenter
-                textFormat: Text.PlainText
-                text: rowItem.modelData.subject
-                elide: Text.ElideRight
-                color: rowItem.rowColor
-                font.family: root.fontFamily; font.pixelSize: Style.font.body
-                font.bold: rowItem.isCurrent
-                font.strikeout: rowItem.past
-                MouseArea { id: subjectMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-                PanelToolTip {
-                  visible: subjectMouse.containsMouse && subjectText.truncated
-                  text: rowItem.modelData.subject
-                  fontFamily: root.fontFamily
-                }
-              }
-              Text {
-                id: locationText
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                visible: !rowItem.hasButton && rowItem.location !== ""
-                textFormat: Text.PlainText
-                text: rowItem.location
-                elide: Text.ElideRight
-                width: Math.min(implicitWidth, Style.space(150))
-                color: root.muted
-                font.family: root.fontFamily; font.pixelSize: Style.font.caption
-                MouseArea { id: locationMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
-                PanelToolTip {
-                  visible: locationMouse.containsMouse && locationText.truncated
-                  text: rowItem.location
-                  fontFamily: root.fontFamily
-                }
-              }
-              Button {
-                id: joinBtn
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: rowItem.skipped ? "Skipped · restore" : "Join"
-                visible: rowItem.hasButton
-                fontFamily: root.fontFamily
-                foreground: rowItem.skipped ? root.muted : root.fg
-                bordered: true
-                onClicked: {
-                  if (!w) return
-                  if (rowItem.skipped) w.restore(rowItem.modelData)
-                  else { w.join(rowItem.modelData.joinUrl); root.close() }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // One-click declutter; persisted, so it stays the way you set it.
+      // Finished meetings live in their own section at the bottom, most recent
+      // first. The show/hide toggle persists, so it stays the way you set it.
       Item {
         width: column.width
         height: pastLabel.implicitHeight
         visible: root.pastCount > 0
         Text {
+          anchors.left: parent.left
+          text: "Finished"
+          color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        }
+        Text {
           id: pastLabel
           anchors.right: parent.right
-          text: root.hidePast ? "Show " + root.pastCount + " finished" : "Hide " + root.pastCount + " finished"
+          text: root.hidePast ? "Show " + root.pastCount : "Hide " + root.pastCount
           color: pastMouse.containsMouse ? root.fg : root.muted
           font.family: root.fontFamily; font.pixelSize: Style.font.caption
           MouseArea { id: pastMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.save("hidePast", !root.hidePast) }
         }
       }
+
+      MeetingList { rows: root.pastRows; visible: root.pastCount > 0 && !root.hidePast }
 
       PanelSeparator {}
 
