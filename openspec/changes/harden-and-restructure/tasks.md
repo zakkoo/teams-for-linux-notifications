@@ -40,4 +40,4 @@
 ## 6. Release
 
 - [x] 6.1 Bump `version` in manifest.json to 0.3.5 and add a matching `## 0.3.5` CHANGELOG.md entry (one short paragraph: the five fixes in user terms, plus a line that the code was restructured with no other behaviour change); verify `test_marketplace_files_present` passes and the top CHANGELOG heading equals the manifest version.
-- [ ] 6.2 Commit with the release message style of the existing history and tag `v0.3.5`; verify `git tag` lists it and the tag points at the commit that contains the manifest bump.
+- [x] 6.2 Commit with the release message style of the existing history and tag `v0.3.5`; verify `git tag` lists it and the tag points at the commit that contains the manifest bump.
