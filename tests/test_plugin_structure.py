@@ -61,6 +61,11 @@ class QmlContracts(unittest.TestCase):
             self.assertIn(f'moduleName: "{M["id"]}"', src)
         self.assertIn(f'ipcTarget: "{M["id"]}"', self.panel)
 
+    def test_launcher_only_accepts_allowlisted_join_urls(self):
+        # The URL becomes a teams-for-linux argument; the guard must sit right before execDetached.
+        body = self.svc.split("function join(url) {", 1)[1].split("execDetached", 1)[0]
+        self.assertIn("teams\\.(microsoft\\.com|live\\.com|cloud\\.microsoft)", body)
+
     def test_every_setting_read_in_qml_is_declared(self):
         for key in set(re.findall(r'setting\("(\w+)"', self.bw + self.panel)):
             self.assertIn(key, SCHEMA, key)

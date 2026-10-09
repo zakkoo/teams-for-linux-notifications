@@ -72,6 +72,9 @@ def read_packet(sock):
 
 
 # --- Teams topics
+JOIN_URL = re.compile(r"https://teams\.(microsoft\.com|live\.com|cloud\.microsoft)/[^\s\"'<>]+")
+
+
 def parse_graph_events(data):
     """Microsoft Graph calendarView JSON -> [{id, subject, start, end, joinUrl}], start/end ISO UTC."""
     while isinstance(data, dict):
@@ -95,8 +98,9 @@ def parse_graph_events(data):
         if start is None:
             continue
         end = end or start + timedelta(hours=1)
-        m = re.search(r"https://teams\.microsoft\.com/\S+", e.get("bodyPreview") or "")
-        url = (e.get("onlineMeeting") or {}).get("joinUrl") or (m and m.group(0)) or ""  # no webLink: that is Outlook, not a call
+        # Allowlist: the loopback broker is unauthenticated, and the URL becomes a launcher argument.
+        m = JOIN_URL.fullmatch((e.get("onlineMeeting") or {}).get("joinUrl") or "") or JOIN_URL.search(e.get("bodyPreview") or "")
+        url = m.group(0) if m else ""  # no webLink: that is Outlook, not a call
         location = ((e.get("location") or {}).get("displayName") or "").strip()
         out.append({"id": e.get("id") or start.isoformat(), "subject": e.get("subject") or "(no subject)",
                     "start": start.isoformat(), "end": end.isoformat(), "joinUrl": url, "location": location})

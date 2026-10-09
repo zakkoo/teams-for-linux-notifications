@@ -159,7 +159,7 @@ Item {
   // Teams for Linux forwards argv to its running instance and opens meetup-join
   // links in the app (urlHandling.openMeetupJoinInApp defaults to true).
   function join(url) {
-    if (!url) return
+    if (!/^https:\/\/teams\.(microsoft\.com|live\.com|cloud\.microsoft)\/\S+$/.test(url || "")) return  // mirrors JOIN_URL in bridge.py
     Quickshell.execDetached(["sh", "-c", 'command -v teams-for-linux >/dev/null 2>&1 && exec teams-for-linux "$1" || exec xdg-open "$1"', "_", url])
   }
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.9
+
+Join links are now checked before anything is launched. The local MQTT
+broker has no password, so another account on the same machine could feed
+the widget a fake "join URL" that was really a command-line flag, and
+clicking Join would have passed it straight to Teams. The bridge now keeps
+only real `https://teams.microsoft.com`, `teams.live.com` and
+`teams.cloud.microsoft` links and the launcher re-checks the same rule.
+
 ## 0.3.8
 
 The hover tooltip on a cut-off title or location is fixed for real. The

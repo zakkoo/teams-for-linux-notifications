@@ -47,8 +47,16 @@ class ParseGraphEvents(unittest.TestCase):
     def test_join_url_sources(self):
         body = ev(bodyPreview="Join here: https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc thanks")
         self.assertEqual(parse({"value": [body]})[0]["joinUrl"], "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc")
-        preferred = ev(onlineMeeting={"joinUrl": "https://j"}, bodyPreview="https://teams.microsoft.com/l/other")
-        self.assertEqual(parse({"value": [preferred]})[0]["joinUrl"], "https://j")
+        preferred = ev(onlineMeeting={"joinUrl": "https://teams.live.com/meet/1"}, bodyPreview="https://teams.microsoft.com/l/other")
+        self.assertEqual(parse({"value": [preferred]})[0]["joinUrl"], "https://teams.live.com/meet/1")
+
+    def test_only_allowlisted_join_urls_reach_the_launcher(self):
+        for bad in ("--remote-debugging-port=9222", "https://evil.example/teams.microsoft.com/x",
+                    "https://teams.microsoft.com.evil.example/x", "http://teams.microsoft.com/x", "https://j",
+                    "https://teams.microsoft.com/x --remote-debugging-port=9222"):
+            self.assertEqual(parse({"value": [ev(onlineMeeting={"joinUrl": bad})]})[0]["joinUrl"], "", bad)
+        self.assertEqual(parse({"value": [ev(onlineMeeting={"joinUrl": "--x"}, bodyPreview="see https://teams.microsoft.com/l/m")]})[0]["joinUrl"],
+                         "https://teams.microsoft.com/l/m")
 
     def test_outlook_web_link_is_not_a_join_url(self):
         out = parse({"value": [ev(webLink="https://outlook.office365.com/calendar/item/x", location={"displayName": " Room 4.12 "})]})[0]
