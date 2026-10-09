@@ -144,6 +144,23 @@ class QmlContracts(unittest.TestCase):
         self.assertRegex(self.svc, r"onCommandChanged: \{[^}]*restarting = true")
         self.assertRegex(self.svc, r"if \(!restarting && !root\.bridgeError\) root\.bridgeError = ")
 
+    def test_quit_disables_the_plugin_on_its_own_process(self):
+        enable = "omarchy plugin enable " + M["id"]
+        self.assertIn("Quit plugin", self.panel)
+        self.assertIn(enable, self.panel)
+        self.assertIn(enable, read("README.md"))
+        block = self.panel.split("id: quitProc", 1)[1].split("\n  }", 1)[0]
+        self.assertIn('"omarchy", "plugin", "disable", "%s"' % M["id"], block)
+        self.assertNotIn("teams-config.py", block)
+        self.assertNotIn("actionProc", block)
+
+    def test_unload_does_not_restart_the_bridge(self):
+        exited = self.svc.split("onExited: function(code) {", 1)[1].split("onCommandChanged:", 1)[0]
+        self.assertLess(exited.find("if (unloading) return"), exited.find("bridgeError"))
+        self.assertLess(exited.find("if (unloading) return"), exited.find("restartTimer.restart()"))
+        destruction = self.svc.split("Component.onDestruction: {", 1)[1].split("}", 1)[0]
+        self.assertLess(destruction.find("unloading = true"), destruction.find("bridge.running = false"))
+
     def test_status_text_is_a_property(self):
         self.assertRegex(self.svc, r"readonly property string statusText:")
         for src in (self.bw, self.panel):

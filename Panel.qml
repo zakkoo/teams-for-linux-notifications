@@ -21,6 +21,7 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   property string actionHint: ""
   property bool settingsOpen: false   // daily use is the meeting list; settings fold away
+  property bool quitArmed: false      // first Quit click only asks; the second removes the widget
   property bool advancedOpen: false
   property string version: ""
   // Languages whose "meeting started" toast the Connect button teaches Teams for Linux to recognise.
@@ -46,7 +47,7 @@ Panel {
   }
 
   function open() { root.controller.show(); if (w) w.refreshWired(); actionHint = "" }
-  function close() { root.controller.hide(); settingsOpen = false; advancedOpen = false }
+  function close() { root.controller.hide(); settingsOpen = false; advancedOpen = false; quitArmed = false }
   function toggle() { opened ? close() : open() }
 
   function save(key, value) {
@@ -66,7 +67,19 @@ Panel {
     }
   }
 
-  function runAction(a) { if (actionProc.running) return; actionProc.action = a; actionProc.running = true }
+  function runAction(a) { if (actionProc.running || quitProc.running) return; actionProc.action = a; actionProc.running = true }
+
+  Process {
+    id: quitProc
+    command: ["omarchy", "plugin", "disable", "io.github.zakkoo.teams-for-linux-notifications"]
+    stderr: SplitParser { onRead: function(line) { console.log("quit-plugin: " + line) } }
+    onExited: function(code) {
+      if (code === 0) return
+      console.log("quit-plugin: disable exited " + code)
+      root.actionHint = "Could not quit the plugin (see shell log)"
+      root.quitArmed = false
+    }
+  }
 
   // A labelled number with a one-line explanation underneath.
   component SettingNumber: Column {
@@ -255,7 +268,11 @@ Panel {
 
       PanelSeparator {}
 
-      Fold { title: "Settings & connection"; open: root.settingsOpen; onToggled: root.settingsOpen = !root.settingsOpen }
+      Fold {
+        title: "Settings & connection"
+        open: root.settingsOpen
+        onToggled: { root.settingsOpen = !root.settingsOpen; if (!root.settingsOpen) root.quitArmed = false }
+      }
 
       Column {
         visible: root.settingsOpen
@@ -363,7 +380,7 @@ Panel {
           fontFamily: root.fontFamily
           foreground: root.fg
           bordered: true
-          enabled: !actionProc.running
+          enabled: !actionProc.running && !quitProc.running
           onClicked: root.runAction(w && w.teamsWired ? "disconnect" : "connect")
         }
         Text {
@@ -372,6 +389,27 @@ Panel {
           text: root.actionHint
           wrapMode: Text.Wrap
           color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        }
+
+        PanelSeparator {}
+
+        Button {
+          text: root.quitArmed ? "Remove from the bar" : "Quit plugin"
+          fontFamily: root.fontFamily
+          foreground: root.fg
+          bordered: true
+          enabled: !quitProc.running && !actionProc.running
+          onClicked: {
+            if (!root.quitArmed) { root.quitArmed = true; return }
+            quitProc.running = true
+          }
+        }
+        Text {
+          visible: root.quitArmed
+          width: parent.width
+          text: "This takes the widget off the bar. The Teams for Linux config is left unchanged. Put it back with omarchy plugin enable io.github.zakkoo.teams-for-linux-notifications."
+          wrapMode: Text.Wrap
+          color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
         }
       }
 
@@ -396,7 +434,7 @@ Panel {
         fontFamily: root.fontFamily
         foreground: root.fg
         bordered: true
-        enabled: !actionProc.running
+        enabled: !actionProc.running && !quitProc.running
         onClicked: root.runAction("connect")
       }
       Text {

@@ -169,12 +169,15 @@ Item {
     id: bridge
     // Set before a deliberate stop (settings change) so the exit is not reported as an error.
     property bool restarting: false
+    // Set before the service is destroyed so that exit is not started again.
+    property bool unloading: false
     command: ["/usr/bin/python3", root.scriptDir + "bridge.py",
               "--port", String(root.mqttPort), "--prefix", root.mqttPrefix, "--poll-minutes", String(root.pollMinutes)]
     running: true
     stdout: SplitParser { onRead: function(line) { root.applyLine(line) } }
     stderr: SplitParser { onRead: function(line) { console.log("teams-bridge: " + line) } }
     onExited: function(code) {
+      if (unloading) return
       root.bridgeAlive = false
       root.connected = false
       if (!restarting && !root.bridgeError) root.bridgeError = "bridge exited (" + code + ")"
@@ -203,6 +206,8 @@ Item {
 
   Component.onCompleted: Plugin.ServiceRegistry.instance = root
   Component.onDestruction: {
+    bridge.unloading = true
+    restartTimer.stop()
     bridge.running = false
     if (Plugin.ServiceRegistry.instance === root) Plugin.ServiceRegistry.instance = null
   }

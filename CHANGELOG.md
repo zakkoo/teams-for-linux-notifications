@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.11
+
+The popup settings can now quit the plugin. Quit plugin asks once, then
+takes the widget off the bar and stops its bridge until you enable the
+plugin again. The Teams for Linux config is left alone, and enabling
+again starts from the default settings.
+
 ## 0.3.10
 
 Connecting or disconnecting no longer loosens the permissions of the Teams
