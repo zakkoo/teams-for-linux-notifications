@@ -29,6 +29,17 @@ class TeamsConfig(unittest.TestCase):
         self.assertEqual(cfg["graphApi"], {"enabled": True})
         self.assertEqual(self.cli("status", "--config", self.cfg), "connected")
 
+    def test_rewrite_preserves_file_mode_and_new_files_are_private(self):
+        mode = lambda: os.stat(self.cfg).st_mode & 0o777
+        self.cli("connect", "--config", self.cfg)
+        self.assertEqual(mode(), 0o600, "fresh config is private: it may hold inline credentials")
+        for want in (0o644, 0o600):
+            os.chmod(self.cfg, want)
+            self.cli("disconnect", "--config", self.cfg)
+            self.assertEqual(mode(), want)
+            self.cli("connect", "--config", self.cfg)
+            self.assertEqual(mode(), want)
+
     def test_connect_keeps_unrelated_keys_and_backs_up(self):
         json.dump({"mqtt": {"username": "u", "enabled": False, "meetingStartDetection": {"patterns": ["mine"], "resetSeconds": 20}}, "closeAppOnCross": True}, open(self.cfg, "w"))
         backup = self.cli("connect", "--config", self.cfg, "--port", "1999", "--prefix", "tfl")

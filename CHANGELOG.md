@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.10
+
+Connecting or disconnecting no longer loosens the permissions of the Teams
+for Linux config file. The rewrite used to create a fresh file with the
+default permissions, so a private config could become readable by other
+accounts on the machine. The new file now keeps the mode of the old one,
+and a config created from scratch is private to you.
+
 ## 0.3.9
 
 Join links are now checked before anything is launched. The local MQTT

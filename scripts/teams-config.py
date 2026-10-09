@@ -44,11 +44,13 @@ def load(path):
 
 def save(path, cfg):
     backup = ""
+    mode = 0o600  # the config may hold inline credentials: private unless the user chose otherwise
     if os.path.exists(path):
+        mode = os.stat(path).st_mode & 0o777
         backup = f"{path}.bak-{time.strftime('%Y%m%d-%H%M%S')}"
         os.replace(path, backup)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode), "w") as f:  # created with its mode, never briefly wider
         json.dump(cfg, f, indent=2, ensure_ascii=False)
         f.write("\n")
     return backup
