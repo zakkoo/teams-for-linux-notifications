@@ -1,22 +1,12 @@
 # Teams Meetings for Omarchy
 
-**Never miss a Teams meeting again.**
+## Prerequisites
 
-Teams for Linux only reminds you inside its own window. This
-widget puts your next meeting straight into the Omarchy bar.
+- **Omarchy 4.** The widget lives in the Omarchy bar and starts with the shell.
+- **[Teams for Linux](https://github.com/IsmaelMartinez/teams-for-linux) 2.20 or newer**, signed in. A package, Flatpak, or Snap install all work. The plugin finds that config on its own.
+- **Python 3** at `/usr/bin/python3`. Omarchy already includes it.
 
-- **Works out of the box.** It reads the calendar Teams for Linux already has.
-  No Azure app registration, no admin approval, no API keys, no extra programs.
-- **Nothing to configure by hand.** One click connects it to Teams for Linux,
-  every setting lives in the widget's own popup.
-- **Click to join.** Meetings open in Teams for Linux, not in a browser tab.
-  Meetings in a physical room show the room instead.
-- **Snoozable reminder.** Optionally a card pops up before the meeting with
-  **Join**, **Remind me in N min** and **Dismiss**. Each snooze halves the
-  time left (15 min → remind in 7 → remind in 4 → …). Clicking the card
-  itself does nothing; only the buttons act.
-
-![Preview](preview.png)
+Teams for Linux has to be running for meetings to appear.
 
 ## Install
 
@@ -24,100 +14,39 @@ widget puts your next meeting straight into the Omarchy bar.
 omarchy plugin add https://github.com/zakkoo/teams-for-linux-notifications.git --enable
 ```
 
-Then **click the small calendar icon** in the center of the bar and press
-**Connect Teams for Linux**. That adds a few lines to Teams for Linux's own
-config file (keeping a timestamped backup). Restart Teams for Linux once. Done.
+A calendar icon shows up in the center of the bar. Click it and press **Connect Teams for Linux**.
 
-Move it where you like:
+Connect writes a few lines into Teams for Linux's config and keeps a timestamped backup next to that file. Restart Teams for Linux once. The popup tells you when that restart is the step left.
+
+The icon stays dim until Teams connects. Hover it and it says why.
+
+To move the icon:
 
 ```bash
 omarchy bar move io.github.zakkoo.teams-for-linux-notifications --section right
 ```
 
-## What you see
+## It comes and finds you
 
-| State | Bar |
-|---|---|
-| Next meeting within the horizon (default 15 min) | `󰃰 Standup in 12m` |
-| Meeting started, you have not joined | `󰃰 Standup · now` in the urgent colour, sticky |
-| You are in the call | `󰃰 Standup · in call` |
-| Nothing upcoming | `󰃰` alone; hover says "Connected" |
-| Teams for Linux closed or not yet connected | `󰃰` dimmed; hover says why ("Waiting for Teams for Linux (is it running?)") |
+Your next meeting sits on the bar and counts down in the open. Once it is inside the next 15 minutes the bar reads **Standup in 12m**, then 11, then 10. When the meeting starts and you still have not joined, the label turns urgent and stays there: **Standup · now**. It stays until you join, you dismiss it, or the meeting ends. In the call it settles to **Standup · in call**. The rest of the day the calendar icon stays put, quiet.
 
-The icon is always in the bar, so a bare icon means the widget is fine and
-simply has nothing to announce. Only the text comes and goes.
+The part that taps you on the shoulder is the reminder card. Open the icon, turn on **Reminder card as well**, and choose how many minutes before the start it should appear. A card then drops onto the screen you are looking at, over whatever you are doing:
 
-Left click opens the popup with today's meetings. Right click joins the shown
-meeting directly. Middle click dismisses a meeting you are skipping.
+**Standup**
+Teams meeting in 15 min
 
-## Settings
+**Join** · **Remind me in 7 min** · **Dismiss**
 
-Everything is in the popup under **Settings & connection**: how far ahead the
-next meeting appears (15 minutes by default), how often the calendar is
-checked, whether long titles scroll through the bar, an optional reminder
-card and its lead time, and, under *Advanced*, the local port and message
-prefix used to talk to Teams for Linux. The meeting list has its own toggle to
-hide finished meetings. The same values are also editable in the shell's
-widget settings form.
+Remind me sends the card away and brings it back with half the time left. Fifteen minutes becomes a nudge in seven, then four, then two. Inside the last minute that button is gone. Join, or dismiss.
 
-## Remove
+Dismiss before the start only silences that early card. The moment the meeting begins, the card comes back and waits. Dismiss then, and you have skipped the meeting. It stays in the day's list, dimmed, and you can restore it with one click.
 
-```bash
-omarchy plugin remove io.github.zakkoo.teams-for-linux-notifications --yes
-```
+Clicking the card outside its buttons does nothing. You join on purpose.
 
-Press **Disconnect** under Settings & connection first if you want the added
-lines taken out of Teams' config again. Forgot? Run
-`python3 scripts/teams-config.py disconnect` from a checkout, or restore the
-`config.json.bak-*` file next to it. Teams with a dangling MQTT config just
-keeps retrying quietly.
+Join opens the meeting in Teams for Linux. A room booking shows the room. Already in a call? That meeting stays quiet, and the next one still gets its own card. Up to three cards stack, soonest on top. A fourth waits until you clear one.
 
-## Requirements
+Right-click the bar to join the meeting it is showing. Left-click for the rest of today.
 
-Omarchy 4 shell and Teams for Linux 2.20 or newer, installed as a package,
-Flatpak or Snap (the config file is found automatically). The Connect button
-enables Teams for Linux's MQTT, Graph API and meeting-start detection features.
-## Languages
+The calendar is the one already signed in inside Teams for Linux. **Connect** is the only setup.
 
-Teams for Linux detects a starting meeting primarily through Teams' internal
-events, which work in any language. Its text-based fallback reads the
-"meeting started" banner, and Connect teaches it the wording for **English,
-German, Spanish, French and Portuguese**. If your system language is not one
-of these, the popup says so and links to an issue template; switching Teams to
-one of the supported languages also works. Requests for more languages are
-welcome: [open an issue](https://github.com/zakkoo/teams-for-linux-notifications/issues/new).
-
-## Coming from the proof of concept?
-
-If you ran the old systemd version from this repo: `./install.sh --remove`
-on the old checkout before installing the plugin.
-
-## Versioning
-
-Semantic versions, starting at 0.1.0, kept in `manifest.json` and listed in
-[CHANGELOG.md](CHANGELOG.md). The running version is printed in the bottom
-right corner of the popup.
-
-## Development
-
-```bash
-python3 -m unittest discover -s tests -v   # bridge protocol, calendar parsing, Teams config helper, plugin structure
-node --test tests/model.test.js            # bar label state machine against the spec scenarios
-omarchy plugin validate .                  # the shell's own manifest check (needs Omarchy)
-```
-
-`Model.js` is pure logic in three layers: `normalize` parses and sorts the
-events once, `eventState` judges one meeting on its own, and `labelState`,
-`dueReminders` and `splitDay` compose the bar label, the reminder cards and the
-popup sections from those. Every entry point takes one context object
-(`{events, nowMs, inCall, inCallEventId, meetingStarted, pulseAtMs, horizonMin,
-leadMin, dismissed, remindAt, hidePast}`), so a test scenario is a literal.
-`Service.qml` builds that object once and owns the bookkeeping (dismissals,
-snoozes, the meeting a call belongs to); `bridge.py` keeps its state in one
-`Broker` object that the tests construct fresh per scenario.
-
-No test dependencies: Python's `unittest` and Node's built-in test runner.
-GitHub Actions runs both on every push, plus `qmllint` for QML syntax. The
-QML behaviour itself has no headless runner in the shell, so the structure
-tests pin the contracts between manifest, widget, service and scripts, and the
-rest is covered by installing the plugin.
+![Preview](preview.png)
