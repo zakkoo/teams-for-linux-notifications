@@ -37,6 +37,16 @@ class Framing(unittest.TestCase):
         a.sendall(bytes([0x30]) + self.b.varint(len(payload)) + payload)
         self.assertEqual(self.b.read_packet(b), (3, 0, payload))
 
+    def test_read_packet_over_max_size_is_none_without_reading_body(self):
+        a, b = socket.socketpair()
+        a.sendall(b"\x30" + self.b.varint(self.b.MAX_PACKET + 1))
+        b.settimeout(1)
+        self.assertIsNone(self.b.read_packet(b))
+
+    def test_parse_graph_events_caps_event_count(self):
+        ev = {"subject": "x", "start": {"dateTime": "2026-01-01T10:00:00"}, "end": {"dateTime": "2026-01-01T11:00:00"}}
+        self.assertEqual(len(self.b.parse_graph_events([ev] * (self.b.MAX_EVENTS + 50))), self.b.MAX_EVENTS)
+
     def test_read_packet_remaining_length_beyond_four_bytes_is_none(self):
         a, b = socket.socketpair()
         a.sendall(bytes([0x30]) + b"\x80\x80\x80\x80\x01")

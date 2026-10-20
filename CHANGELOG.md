@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.12
+
+The bridge now refuses MQTT packets over 4 MiB and keeps at most 500
+calendar events. The local broker has no password, so another account on
+the machine could have sent a huge calendar payload and run the bridge and
+the shell out of memory. A real day of meetings is far below both limits.
+
 ## 0.3.11
 
 The popup settings can now quit the plugin. Quit plugin asks once, then

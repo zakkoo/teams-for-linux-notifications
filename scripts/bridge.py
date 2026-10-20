@@ -14,6 +14,9 @@ def log(msg):
 
 
 # --- MQTT framing (pure functions; a malformed buffer raises ValueError/IndexError and the client is dropped)
+# The loopback broker is unauthenticated: cap what one packet and one calendar may cost us in memory.
+MAX_PACKET = 4 * 1024 * 1024  # a day of Graph events is a few hundred KiB at most
+MAX_EVENTS = 500
 def varint(n):
     out = b""
     while True:
@@ -54,7 +57,7 @@ def read_exact(sock, n):
 
 
 def read_packet(sock):
-    """(type, flags, body), or None when the socket closed or the remaining length is malformed."""
+    """(type, flags, body), or None when the socket closed or the remaining length is malformed or over MAX_PACKET."""
     h = read_exact(sock, 1)
     if not h:
         return None
@@ -68,6 +71,8 @@ def read_packet(sock):
             break
     else:
         return None
+    if rem > MAX_PACKET:
+        return None
     return h[0] >> 4, h[0] & 15, (read_exact(sock, rem) if rem else b"")
 
 
@@ -80,7 +85,7 @@ def parse_graph_events(data):
     while isinstance(data, dict):
         data = data.get("value") or data.get("data") or []
     out = []
-    for e in data or []:
+    for e in (data or [])[:MAX_EVENTS]:
         if e.get("isCancelled") or e.get("isAllDay"):
             continue
         times = []
