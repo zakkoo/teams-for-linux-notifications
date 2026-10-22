@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.17
+
+The bridge now accepts loopback connections only from the same Unix account
+that runs it. A different local account can no longer occupy its single
+Teams connection slot. A client also has five seconds to send its first
+packet, and connections with MQTT keepalive disabled have a two-minute idle
+limit, so an abandoned connection cannot hold the slot indefinitely.
+
 ## 0.3.16
 
 The settings inputs are never writable any more, not even while you type in

@@ -4,7 +4,7 @@ Mirrors Teams' topics into one JSON state line on stdout per change:
   {"connected": bool, "inCall": bool, "meetingStarted": bool, "error": str,
    "events": [{"id","subject","start","end","joinUrl","location"}]}   # start/end ISO-8601 UTC
 usage: bridge.py [--port 1883] [--prefix teams] [--poll-minutes 5]"""
-import argparse, json, re, socket, sys, threading, time
+import argparse, json, os, re, socket, sys, threading, time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -18,6 +18,27 @@ def log(msg):
 MAX_PACKET = 4 * 1024 * 1024  # a day of Graph events is a few hundred KiB at most
 MAX_EVENTS = 500
 MAX_FIELD = 1024  # per string field (id, subject, location, joinUrl): bounds the state line and the shell's per-id maps
+CONNECT_TIMEOUT = 5  # a client must send its first packet promptly
+MAX_IDLE = 120  # even MQTT keepalive 0 cannot reserve the only client slot forever
+
+
+def peer_uid(sock):
+    """Find the owner of the other end of an accepted IPv4 loopback TCP socket on Linux."""
+    def proc_address(address):
+        host, port = address
+        return f"{socket.inet_aton(host)[::-1].hex().upper()}:{port:04X}"
+
+    local = proc_address(sock.getpeername())
+    remote = proc_address(sock.getsockname())
+    with open("/proc/net/tcp", encoding="ascii") as entries:
+        next(entries)
+        for entry in entries:
+            fields = entry.split()
+            if fields[1] == local and fields[2] == remote and fields[3] == "01":
+                return int(fields[7])
+    return None
+
+
 def varint(n):
     out = b""
     while True:
@@ -173,10 +194,19 @@ class Broker:
                 sock, _ = srv.accept()
             except OSError:  # the listening socket is gone: nothing left to serve
                 return
+            try:
+                uid = peer_uid(sock)
+            except (OSError, ValueError, IndexError):
+                uid = None
+            if uid != os.geteuid():
+                log(f"rejected loopback client owned by uid {uid!r}")
+                sock.close()
+                continue
             self.serve_client(sock)
 
     def serve_client(self, sock):
         """One client to the end; any error (dropped socket, keepalive lapse, bad packet) just drops it."""
+        sock.settimeout(CONNECT_TIMEOUT)
         self.client = Client(self, sock)
         try:
             self.client.serve()
@@ -212,7 +242,7 @@ class Client:
                 cid, _ = rdstr(body, i)
                 log(f"connected: {cid} (mqtt{'5' if self.v5 else '3.1.1'}, keepalive {keepalive}s)")
                 # Silent for 1.5x the keepalive means dead (no FIN after a crash or suspend): time out and drop.
-                self.sock.settimeout(1.5 * keepalive if keepalive else None)
+                self.sock.settimeout(min(1.5 * keepalive, MAX_IDLE) if keepalive else MAX_IDLE)
                 self.send(0x20, b"\x00\x00\x00" if self.v5 else b"\x00\x00")
             elif t == 8:  # SUBSCRIBE
                 pid, i = body[:2], 2

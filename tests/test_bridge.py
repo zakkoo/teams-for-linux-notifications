@@ -1,6 +1,7 @@
 """The stdlib MQTT bridge: framing, both protocol levels, topic handling, state lines, client drops."""
 import json, socket, subprocess, sys, threading, time, unittest
 from datetime import datetime, timedelta
+from unittest import mock
 
 from _bridge_helpers import ROOT, FakeTeams, load_script
 
@@ -277,7 +278,7 @@ class Process(unittest.TestCase):
 
 
 class EndToEndSocket(unittest.TestCase):
-    """A real TCP client against the real accept loop: sequential clients, connected flips on drop, silent clients time out."""
+    """A real TCP client against the real accept loop: ownership, timeouts and reconnects."""
 
     def setUp(self):
         self.b = load_script("bridge")
@@ -317,6 +318,41 @@ class EndToEndSocket(unittest.TestCase):
             self.assertTrue(self.lines[-1]["connected"])
             c.close()  # drop without DISCONNECT
             self.assertTrue(self.wait_disconnected(2))
+
+    def test_other_uid_is_rejected_without_taking_the_client_slot(self):
+        with mock.patch.object(self.b, "peer_uid", return_value=-1):
+            stranger = socket.create_connection(("127.0.0.1", self.port))
+            stranger.settimeout(2)
+            self.assertEqual(stranger.recv(1), b"")
+            stranger.close()
+        self.assertIsNone(self.broker.client)
+        c = self.raw_connect()
+        self.subscribe(c)
+        self.assertTrue(self.lines[-1]["connected"])
+        c.close()
+
+    def test_silent_client_before_connect_times_out(self):
+        with mock.patch.object(self.b, "CONNECT_TIMEOUT", 0.2):
+            silent = socket.create_connection(("127.0.0.1", self.port))
+            silent.settimeout(2)
+            self.assertEqual(silent.recv(1), b"")
+            silent.close()
+        c = self.raw_connect()
+        self.subscribe(c)
+        self.assertTrue(self.lines[-1]["connected"])
+        c.close()
+
+    def test_zero_keepalive_still_has_an_idle_limit(self):
+        with mock.patch.object(self.b, "MAX_IDLE", 0.2):
+            c = self.raw_connect(keepalive=0)
+            self.subscribe(c)
+            self.assertEqual(c.recv(1), b"")
+            self.assertTrue(self.wait_disconnected(2))
+            c.close()
+        c2 = self.raw_connect()
+        self.subscribe(c2)
+        self.assertTrue(self.lines[-1]["connected"])
+        c2.close()
 
     def test_silent_client_is_dropped_after_its_keepalive_and_the_next_is_served(self):
         c = self.raw_connect(keepalive=1)
