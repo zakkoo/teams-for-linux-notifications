@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.16
+
+The settings inputs are never writable any more, not even while you type in
+them: the port and prefix fields insert your keystrokes themselves, and the
+minute fields take the +/- buttons and arrow keys only. Qt reads the whole
+clipboard into any writable text input whenever the clipboard changes, so
+this closes the last way another app could stall the shell through this
+popup. Pasting into these fields is no longer possible.
+
 ## 0.3.15
 
 The settings inputs now exist only while the settings fold is open, and

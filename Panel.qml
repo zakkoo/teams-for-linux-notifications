@@ -95,10 +95,55 @@ Panel {
       id: field
       width: parent.width
       foreground: root.fg; fontFamily: root.fontFamily
-      // Editable only while focused: a non-read-only TextInput reads the whole
-      // clipboard offer on every change, which any Wayland client can make huge.
-      Component.onCompleted: field.field.editable = Qt.binding(function() { return field.field.activeFocus })
+      // Buttons and arrow keys only: an editable TextInput reads the whole clipboard
+      // offer on every clipboard change, which any Wayland client can make huge.
+      Component.onCompleted: field.field.editable = false
       onModified: function(v) { parent.modified(v) }
+    }
+    Text {
+      width: parent.width
+      text: parent.hint
+      wrapMode: Text.Wrap
+      color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+    }
+  }
+
+  // A labelled text input that is never writable (see SettingNumber): typed keys
+  // are inserted by hand, filtered by `allow` and capped at `limit`. No paste.
+  component SettingText: Column {
+    property string label: ""
+    property string hint: ""
+    property alias text: field.text
+    property alias allow: field.allow
+    property alias limit: field.limit
+    signal committed(string value)
+    width: column.width
+    spacing: Style.space(2)
+    Text {
+      text: parent.label
+      color: Qt.darker(root.fg, 1.4); font.family: root.fontFamily; font.pixelSize: Style.font.bodySmall
+    }
+    TextField {
+      id: field
+      property var allow: /^[\x21-\x7e]$/   // one printable ASCII character
+      property int limit: 64
+      width: Style.space(120)
+      foreground: root.fg
+      readOnly: true
+      cursorVisible: activeFocus
+      function commit() { parent.committed(text.trim()) }
+      onActiveFocusChanged: if (!activeFocus) commit()
+      Keys.onPressed: function(e) {
+        var a = Math.min(selectionStart, selectionEnd), b = Math.max(selectionStart, selectionEnd)
+        if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) commit()
+        else if (e.key === Qt.Key_Backspace) { if (a === b && a > 0) a--; text = text.slice(0, a) + text.slice(b); cursorPosition = a }
+        else if (e.key === Qt.Key_Delete) { if (a === b) b++; text = text.slice(0, a) + text.slice(b); cursorPosition = a }
+        else if (!(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) && allow.test(e.text) && text.length - (b - a) < limit) {
+          text = text.slice(0, a) + e.text + text.slice(b); cursorPosition = a + 1
+        }
+        else return
+        e.accepted = true
+      }
     }
     Text {
       width: parent.width
@@ -348,29 +393,25 @@ Panel {
           titleSize: Style.font.body
           onClicked: root.advancedOpen = !root.advancedOpen
         }
-        SettingNumber {
+        SettingText {
           visible: root.advancedOpen
-          label: "Local port Teams for Linux talks to"
-          from: 1024; to: 65535
-          value: root.setting("mqttPort", Plugin.ServiceRegistry.defaults.mqttPort)
+          label: "Local port Teams for Linux talks to (1024-65535)"
+          allow: /^[0-9]$/; limit: 5
+          text: String(root.setting("mqttPort", Plugin.ServiceRegistry.defaults.mqttPort))
           hint: "Only reachable from this computer. After changing it, press Connect again and restart Teams for Linux."
-          onModified: function(v) { root.save("mqttPort", v) }
-        }
-        Row {
-          visible: root.advancedOpen
-          width: parent.width
-          spacing: Style.space(8)
-          Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Message prefix"
-            color: root.fg; font.family: root.fontFamily; font.pixelSize: Style.font.body
+          onCommitted: function(v) {
+            var port = parseInt(v, 10)
+            if (port >= 1024 && port <= 65535) root.save("mqttPort", port)
+            else text = String(root.setting("mqttPort", Plugin.ServiceRegistry.defaults.mqttPort))
           }
-          TextField {
-            width: Style.space(120)
-            text: String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
-            readOnly: !activeFocus  // see SettingNumber
-            foreground: root.fg
-            onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))) root.save("mqttPrefix", text.trim())
+        }
+        SettingText {
+          visible: root.advancedOpen
+          label: "Message prefix"
+          text: String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
+          onCommitted: function(v) {
+            if (v !== "" && v !== String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))) root.save("mqttPrefix", v)
+            else text = String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
           }
         }
 
