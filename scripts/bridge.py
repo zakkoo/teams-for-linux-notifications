@@ -151,7 +151,7 @@ class Broker:
 
     def request_calendar(self):
         c = self.client  # snapshot: the accept loop may clear it at any time
-        if not c or f"{self.prefix}/command" not in c.subs:
+        if not c or not c.command:
             return
         # Local midnight, not UTC: "today" must mean the user's day, or evening meetings slide across days.
         s = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -189,7 +189,7 @@ class Broker:
 
 class Client:
     def __init__(self, broker, sock):
-        self.broker, self.sock, self.v5, self.subs, self.lock = broker, sock, False, set(), threading.Lock()
+        self.broker, self.sock, self.v5, self.command, self.lock = broker, sock, False, None, threading.Lock()
 
     def send(self, type_flags, body):
         with self.lock:
@@ -220,11 +220,11 @@ class Client:
                 codes = b""
                 while i < len(body):
                     topic, i = rdstr(body, i); i += 1
-                    self.subs.add(topic); codes += b"\x00"
+                    codes += b"\x00"
+                    # Only the command topic matters; remembering every topic let a client grow memory without bound.
+                    if topic.endswith("/command"):  # follow whatever prefix Teams actually uses
+                        self.command, self.broker.prefix = topic, topic[:-len("/command")]
                 self.send(0x90, pid + (b"\x00" if self.v5 else b"") + codes)
-                for topic in self.subs:  # follow whatever prefix Teams actually uses
-                    if topic.endswith("/command"):
-                        self.broker.prefix = topic[:-len("/command")]
                 self.broker.emit(connected=True, error="")
                 self.broker.request_calendar()
             elif t == 3:  # PUBLISH

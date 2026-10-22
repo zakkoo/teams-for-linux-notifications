@@ -90,6 +90,17 @@ class Protocol(unittest.TestCase):
         t.disconnect()
 
     @both
+    def test_subscriptions_do_not_accumulate(self, t):
+        t.connect()
+        for n in range(200):
+            t.subscribe(f"junk/{n}", pid=n + 1)
+        self.assertFalse(self.broker.client.command)
+        t.subscribe("teams/command", pid=250)
+        self.assertEqual(self.broker.client.command, "teams/command")
+        self.assertEqual(t.read_publish()[0], "teams/command")
+        t.disconnect()
+
+    @both
     def test_connect_with_username_password_and_will(self, t):
         # Teams for Linux sets a last-will on <prefix>/connected; the CONNECT payload then carries will topic/message.
         extra = self.b.mkstr("teams/connected") + self.b.mkstr("false") + self.b.mkstr("user") + self.b.mkstr("pass")
@@ -211,7 +222,7 @@ class PollThread(unittest.TestCase):
         broker = self.b.Broker(out=lambda line: None)
 
         class Vanishing:
-            subs = {"teams/command"}
+            command = "teams/command"
 
             def publish(self_, topic, payload):
                 broker.client = None  # the accept loop dropped it meanwhile

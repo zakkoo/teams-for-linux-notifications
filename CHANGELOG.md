@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.13
+
+The bridge no longer remembers every topic a client subscribes to, only
+the command topic it needs. Another account on the machine could have
+subscribed to new topics forever on the open loopback broker and slowly
+run the bridge out of memory.
+
 ## 0.3.12
 
 The bridge now refuses MQTT packets over 4 MiB and keeps at most 500
