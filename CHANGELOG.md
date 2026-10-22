@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.15
+
+The settings inputs now exist only while the settings fold is open, and
+accept editing only while focused. Qt reads the whole clipboard offer into
+any editable text input whenever the clipboard changes, so another app
+offering a huge clipboard could have stalled the shell through this
+popup even with settings closed.
+
 ## 0.3.14
 
 Dismissals and snoozes are now forgotten for meetings that have left the

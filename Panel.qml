@@ -95,6 +95,9 @@ Panel {
       id: field
       width: parent.width
       foreground: root.fg; fontFamily: root.fontFamily
+      // Editable only while focused: a non-read-only TextInput reads the whole
+      // clipboard offer on every change, which any Wayland client can make huge.
+      Component.onCompleted: field.field.editable = Qt.binding(function() { return field.field.activeFocus })
       onModified: function(v) { parent.modified(v) }
     }
     Text {
@@ -274,8 +277,11 @@ Panel {
         onToggled: { root.settingsOpen = !root.settingsOpen; if (!root.settingsOpen) root.quitArmed = false }
       }
 
-      Column {
-        visible: root.settingsOpen
+      // Built only while open: the inputs below must not exist in the shared shell otherwise.
+      Loader {
+        active: root.settingsOpen
+        width: column.width
+        sourceComponent: Column {
         width: column.width
         spacing: Style.space(10)
 
@@ -362,6 +368,7 @@ Panel {
           TextField {
             width: Style.space(120)
             text: String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))
+            readOnly: !activeFocus  // see SettingNumber
             foreground: root.fg
             onEditingFinished: if (text.trim() !== "" && text.trim() !== String(root.setting("mqttPrefix", Plugin.ServiceRegistry.defaults.mqttPrefix))) root.save("mqttPrefix", text.trim())
           }
@@ -410,6 +417,7 @@ Panel {
           text: "This takes the widget off the bar. The Teams for Linux config is left unchanged. Put it back with omarchy plugin enable io.github.zakkoo.teams-for-linux-notifications."
           wrapMode: Text.Wrap
           color: root.muted; font.family: root.fontFamily; font.pixelSize: Style.font.caption
+        }
         }
       }
 
