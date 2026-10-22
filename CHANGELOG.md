@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.14
+
+Dismissals and snoozes are now forgotten for meetings that have left the
+calendar, and the bridge caps every text field of an event at 1 KiB. Before,
+another account on the machine could feed the open loopback broker an endless
+stream of fresh meeting ids and grow the shell's memory indefinitely.
+
 ## 0.3.13
 
 The bridge no longer remembers every topic a client subscribes to, only

@@ -17,6 +17,7 @@ def log(msg):
 # The loopback broker is unauthenticated: cap what one packet and one calendar may cost us in memory.
 MAX_PACKET = 4 * 1024 * 1024  # a day of Graph events is a few hundred KiB at most
 MAX_EVENTS = 500
+MAX_FIELD = 1024  # per string field (id, subject, location, joinUrl): bounds the state line and the shell's per-id maps
 def varint(n):
     out = b""
     while True:
@@ -107,8 +108,8 @@ def parse_graph_events(data):
         m = JOIN_URL.fullmatch((e.get("onlineMeeting") or {}).get("joinUrl") or "") or JOIN_URL.search(e.get("bodyPreview") or "")
         url = m.group(0) if m else ""  # no webLink: that is Outlook, not a call
         location = ((e.get("location") or {}).get("displayName") or "").strip()
-        out.append({"id": e.get("id") or start.isoformat(), "subject": e.get("subject") or "(no subject)",
-                    "start": start.isoformat(), "end": end.isoformat(), "joinUrl": url, "location": location})
+        out.append({"id": str(e.get("id") or start.isoformat())[:MAX_FIELD], "subject": str(e.get("subject") or "(no subject)")[:MAX_FIELD],
+                    "start": start.isoformat(), "end": end.isoformat(), "joinUrl": url[:MAX_FIELD], "location": location[:MAX_FIELD]})
     return sorted(out, key=lambda x: x["start"])
 
 

@@ -47,6 +47,14 @@ class Framing(unittest.TestCase):
         ev = {"subject": "x", "start": {"dateTime": "2026-01-01T10:00:00"}, "end": {"dateTime": "2026-01-01T11:00:00"}}
         self.assertEqual(len(self.b.parse_graph_events([ev] * (self.b.MAX_EVENTS + 50))), self.b.MAX_EVENTS)
 
+    def test_parse_graph_events_caps_field_lengths(self):
+        big = "x" * (self.b.MAX_FIELD + 100)
+        ev = {"id": big, "subject": big, "location": {"displayName": big}, "start": {"dateTime": "2026-01-01T10:00:00"},
+              "onlineMeeting": {"joinUrl": "https://teams.microsoft.com/l/" + big}}
+        got = self.b.parse_graph_events([ev])[0]
+        for k in ("id", "subject", "location", "joinUrl"):
+            self.assertEqual(len(got[k]), self.b.MAX_FIELD, k)
+
     def test_read_packet_remaining_length_beyond_four_bytes_is_none(self):
         a, b = socket.socketpair()
         a.sendall(bytes([0x30]) + b"\x80\x80\x80\x80\x01")

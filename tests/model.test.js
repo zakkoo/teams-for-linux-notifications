@@ -5,7 +5,7 @@ const fs = require("fs"), path = require("path")
 
 const src = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(".pragma library", "")
 const M = {}
-new Function("exports", src + "\n" + ["normalize", "pulseAdoptee", "eventState", "labelState", "toastDue", "dismissUntil", "snoozeMinutes", "dueReminders", "splitDay", "fmtTime"]
+new Function("exports", src + "\n" + ["normalize", "keepKnown", "pulseAdoptee", "eventState", "labelState", "toastDue", "dismissUntil", "snoozeMinutes", "dueReminders", "splitDay", "fmtTime"]
   .map((n) => `exports.${n}=${n};`).join(""))(M)
 
 const now = Date.UTC(2026, 9, 7, 9, 0, 0)
@@ -205,4 +205,11 @@ test("fmtTime renders local HH:MM and tolerates garbage", () => {
   const d = new Date(2026, 0, 5, 9, 7)
   assert.equal(M.fmtTime(d.toISOString()), "09:07")
   assert.equal(M.fmtTime("garbage"), "")
+})
+
+test("keepKnown drops ids that left the calendar and keeps the rest", () => {
+  const map = { A: true, B: now + 1000, gone: Infinity }
+  assert.deepEqual(M.keepKnown(map, [ev("A", 1), ev("B", 2), ev("new", 3)]), { A: true, B: now + 1000 })
+  assert.deepEqual(M.keepKnown(map, []), {})
+  assert.deepEqual(M.keepKnown(undefined, [ev("A", 1)]), {})
 })

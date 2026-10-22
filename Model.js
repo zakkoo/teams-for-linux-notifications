@@ -32,6 +32,18 @@ function normalize(events) {
   return list
 }
 
+// A per-id map (dismissed, remindAt) reduced to the ids in events. The
+// calendar comes from an unauthenticated loopback broker, so without this
+// a stream of fresh ids would grow the maps forever.
+function keepKnown(map, events) {
+  var out = {}
+  var arr = events || []
+  for (var i = 0; i < arr.length; i++) {
+    if (map && arr[i].id in map) out[arr[i].id] = map[arr[i].id]
+  }
+  return out
+}
+
 function notDismissed(list, dismissed) {
   return list.filter(function (x) { return !(dismissed && dismissed[x.event.id]) })
 }

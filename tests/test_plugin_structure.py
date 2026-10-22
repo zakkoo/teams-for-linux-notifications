@@ -121,7 +121,7 @@ class QmlContracts(unittest.TestCase):
             writes = re.findall(rf"(?m)^\s*{prop} = (.*)$", self.svc)
             self.assertTrue(writes, f"{prop} is never written")
             for rhs in writes:
-                self.assertRegex(rhs, rf"^(mapWith|mapWithout)\({prop}, |\(\{{\}}\)$", f"{prop} written without a copy: {rhs}")
+                self.assertRegex(rhs, rf"^(mapWith|mapWithout|Model.keepKnown)\({prop}, |\(\{{\}}\)$", f"{prop} written without a copy: {rhs}")
             self.assertNotRegex(self.svc, rf"{prop}\[[^\]]+\] = ", f"{prop} mutated in place")
 
     def test_in_call_meeting_is_locked_for_the_call(self):

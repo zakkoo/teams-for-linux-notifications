@@ -95,12 +95,14 @@ Item {
     meetingStarted = s.meetingStarted === true
     bridgeError = s.error || ""
     events = s.events || []
+    dismissed = Model.keepKnown(dismissed, events)
+    remindAt = Model.keepKnown(remindAt, events)
     nowMs = Date.now()
   }
 
   // dismissed and remindAt are only ever replaced with a copy: QML emits no
   // change for a var property handed the same object back, and the cards and
-  // bar must react at once. These two helpers are the only writers.
+  // bar must react at once. These two helpers and applyLine's pruning are the only writers.
   function mapWith(map, id, value) { var m = Object.assign({}, map); m[id] = value; return m }
   function mapWithout(map, id) { var m = Object.assign({}, map); delete m[id]; return m }
 
